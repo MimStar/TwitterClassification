@@ -1,4 +1,5 @@
 use std::{env, io, process};
+use regex::Regex;
 use csv;
 
 fn main() {
@@ -8,7 +9,13 @@ fn main() {
     if let Ok(mut rdr) = csv::Reader::from_path(&args[1]) {
         for result in rdr.records() {
             if let Ok(record) = result {
-                println!("{:?}", record);
+                if let Some(truc) = record.get(5) {
+                    
+                    let re = Regex::new(r".*yes.*").unwrap();
+                    if re.is_match(truc) {
+                        println!("{:?}", truc);
+                    }
+                }
             }
         }
     }
