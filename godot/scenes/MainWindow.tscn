@@ -1,8 +1,6 @@
-[gd_scene load_steps=4 format=3 uid="uid://bo3w24i8ms8yd"]
+[gd_scene load_steps=2 format=3 uid="uid://bo3w24i8ms8yd"]
 
 [ext_resource type="Script" uid="uid://cn51lkls8d8vo" path="res://scripts/main_window.gd" id="1_m441t"]
-[ext_resource type="PackedScene" uid="uid://dxplcs4p84fpq" path="res://scenes/actions_container.tscn" id="2_lelwj"]
-[ext_resource type="PackedScene" uid="uid://dbt5k2qoeqw7x" path="res://scenes/clean_log_container.tscn" id="3_lelwj"]
 
 [node name="MainWindow" type="Control"]
 layout_mode = 3
@@ -19,13 +17,5 @@ initial_position = 1
 ok_button_text = "Open"
 file_mode = 0
 access = 2
-
-[node name="ActionsContainer" parent="." instance=ExtResource("2_lelwj")]
-layout_mode = 0
-anchors_preset = 0
-
-[node name="CleanLogContainer" parent="." instance=ExtResource("3_lelwj")]
-visible = false
-layout_mode = 1
 
 [connection signal="file_selected" from="FileDialog" to="." method="_on_file_dialog_file_selected"]

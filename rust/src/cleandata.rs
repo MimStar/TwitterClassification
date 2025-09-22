@@ -9,8 +9,6 @@ struct CleanData {
 #[godot_api]
 impl INode for CleanData {
     fn init(base: Base<Node>) -> Self {
-        godot_print!("Clean Data rust node loaded!"); // Prints to the Godot console
-        
         Self {
             base,
         }
@@ -20,7 +18,10 @@ impl INode for CleanData {
 #[godot_api]
 impl CleanData {
     #[func]
-    fn clean_data() {
-        godot_print!("Test");
+    fn clean_data(&mut self, path : String) -> String {
+        return path;
     }
+
+    #[signal]
+    fn log_sent(message : String);
 }
