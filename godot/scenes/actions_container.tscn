@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3 uid="uid://dxplcs4p84fpq"]
+
+[ext_resource type="Theme" uid="uid://del8o8hyfbvg8" path="res://assets/main_theme.tres" id="1_s7unr"]
+
+[node name="ActionsContainer" type="CenterContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+metadata/_edit_use_anchors_ = true
+
+[node name="CleanCSVButton" type="Button" parent="."]
+layout_mode = 2
+theme = ExtResource("1_s7unr")
+text = "Open csv and clean it"
