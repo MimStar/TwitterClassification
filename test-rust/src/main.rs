@@ -43,7 +43,7 @@ fn main() {
     let retweet = format!("{start}RT{end}");
     let url = format!("((http:)|https:|(www.))[^ ]*{end}");
     let user = format!("{start}@[^ ]*{end}");
-    let punctuation = "[!\\?\\\"\\.;,\\:]";
+    let punctuation = "[!\\?\\\"\\.;,\\:\\*]";
 
     println!("{}", unvalid_emojis_re);
 
