@@ -1,35 +1,16 @@
 use godot::prelude::*;
-
 use regex::Regex;
 use csv::{Writer, Reader};
 use std::fs;
 use std::path::PathBuf;
-//mod dirty_impl;
 
+use super::CleanData;
 
-#[derive(GodotClass)]
-#[class(base=Node)]
-struct CleanData {
-    base: Base<Node>,
+trait TestTrait {
+    fn clean_data_body(&mut self, data_path: &str) -> Result<String, &str>;
 }
 
-#[godot_api]
-impl INode for CleanData {
-    fn init(base: Base<Node>) -> Self {
-        Self { base }
-    }
-}
-
-#[godot_api]
-impl CleanData {
-    #[func]
-    fn clean_data(&mut self, path: GString) -> GString {
-        if let Err(e) = self.clean_data_body(&path.to_string()) {
-            println!("{:?}", e);
-        }
-        return path;
-    }
-
+impl TestTrait for CleanData {
     fn clean_data_body(&mut self, data_path: &str) -> Result<String, &str>{
         //let positives= vec!["😀", "😄", "😆", "😁", "🥰"];
         //let negatives = vec!["😡", "😤", "😠", "🤬", "😈", "👿", "💀", "☠"];
@@ -96,7 +77,6 @@ impl CleanData {
                         let re = Regex::new(&retweet).unwrap();
                         if re.is_match(truc) {
                             println!("retweet deleted : {:?}", truc);
-                            self.signals().log_sent().emit(&GString::from(format!("retweet deleted : {:?}", truc)));
                             retweets += 1;
                             continue;
                         }
@@ -106,7 +86,6 @@ impl CleanData {
                         let re = Regex::new(&url).unwrap();
                         if re.is_match(truc) {
                             test = re.replace_all(&test, "").to_string();
-                            self.signals().log_sent().emit(&GString::from(format!("url trimed : {:?}", test)));
                             println!("url trimed : {:?}", test);
                             urls_removed += 1;
                         }
@@ -114,7 +93,6 @@ impl CleanData {
                         let re = Regex::new(&user).unwrap();
                         if re.is_match(truc) {
                             test = re.replace_all(&test, "").to_string();
-                            self.signals().log_sent().emit(&GString::from(format!("user trimed : {:?}", test)));
                             println!("user trimed : {:?}", test);
                             users_removed += 1;
                         }
@@ -122,28 +100,24 @@ impl CleanData {
                         let re = Regex::new(&punctuation).unwrap();
                         if re.is_match(punctuation) {
                             test = re.replace_all(&test, "").to_string();
-                            self.signals().log_sent().emit(&GString::from(format!("punctuation trimed : {:?}", test)));
                             println!("punctuation trimed : {:?}", test);
                             punctuation_trimed += 1;
                         }
                         
                         wtr.write_record(&[rating, &test]);
 
-                    }
-                }
-            }
-            println!("mixed emotions : {mixed_emotions}\nurls trimed : {urls_removed}\nrts deleted: {retweets}\nusers trimed: {users_removed}\npunctuation trimed: {punctuation_trimed}");
-            return match fs::canonicalize(PathBuf::from("clean_data_temp.csv")) {
+                        println!("mixed emotions : {mixed_emotions}\nurls trimed : {urls_removed}\nrts deleted: {retweets}\nusers trimed: {users_removed}\npunctuation trimed: {punctuation_trimed}");
+                        return match fs::canonicalize(PathBuf::from("clean_data_temp.csv")) {
                             Ok(path) => Ok(path.display().to_string()),
                             Err(e) => Err("Couldn't parse output file"),
                         };
+                    }
+                }
+            }
         }
 
         Err("Couldn't open input / output files")
     }
-
-    #[signal]
-    fn log_sent(message : GString);
 }
 
 fn rem_last(value: &str) -> &str {
@@ -151,4 +125,3 @@ fn rem_last(value: &str) -> &str {
     chars.next_back();
     chars.as_str()
 }
-// # !!!
