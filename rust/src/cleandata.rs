@@ -25,3 +25,9 @@ impl CleanData {
     #[signal]
     fn log_sent(message : String);
 }
+
+fn rem_last(value: &str) -> &str {
+    let mut chars = value.chars();
+    chars.next_back();
+    chars.as_str()
+}
