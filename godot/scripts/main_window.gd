@@ -30,12 +30,9 @@ func _on_clean_csv_button_button_up():
 	pass # Replace with function body.
 
 func _on_file_dialog_file_selected(path):
+	add_logs_container()
 	clean_data = CleanData.new()
 	add_child(clean_data)
-	clean_data.log_sent.connect(_on_log_received)
+	clean_data.log_sent.connect(logs_container._on_log_received)
 	var new_path = clean_data.clean_data(path)
 	pass # Replace with function body.
-	
-func _on_log_received(message):
-	print(message)
-	pass

@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://dbt5k2qoeqw7x"]
+[gd_scene load_steps=3 format=3 uid="uid://dbt5k2qoeqw7x"]
 
 [ext_resource type="Theme" uid="uid://del8o8hyfbvg8" path="res://assets/main_theme.tres" id="1_ec48j"]
+[ext_resource type="Script" uid="uid://b5u76brouegmf" path="res://scripts/clean_log_container.gd" id="1_nenk0"]
 
 [node name="CleanLogContainer" type="Control"]
 layout_mode = 3
@@ -9,6 +10,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("1_nenk0")
 
 [node name="RichTextLabel" type="RichTextLabel" parent="."]
 layout_mode = 1
