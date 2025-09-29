@@ -22,5 +22,11 @@ impl CleanData {
     }
 
     #[signal]
-    fn log_sent(message: GString);
+    fn log_sent(message : GString);
+}
+
+fn rem_last(value: &str) -> &str {
+    let mut chars = value.chars();
+    chars.next_back();
+    chars.as_str()
 }
