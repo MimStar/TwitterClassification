@@ -1,0 +1,17 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://c6qicea8nqhni"
+
+[deps]
+
+files=["res://clean_data_temp.Reading my kindle2  Love it Lee childs is good read.translation"]
+
+source_file="res://clean_data_temp.csv"
+dest_files=["res://clean_data_temp.Reading my kindle2  Love it Lee childs is good read.translation"]
+
+[params]
+
+compress=true
+delimiter=0

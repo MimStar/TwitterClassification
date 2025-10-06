@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://dbt5k2qoeqw7x"]
 
 [ext_resource type="Theme" uid="uid://del8o8hyfbvg8" path="res://assets/main_theme.tres" id="1_ec48j"]
-[ext_resource type="Script" uid="uid://b5u76brouegmf" path="res://scripts/clean_log_container.gd" id="1_nenk0"]
+[ext_resource type="Script" path="res://scripts/clean_log_container.gd" id="1_nenk0"]
 
 [node name="CleanLogContainer" type="Control"]
 layout_mode = 3

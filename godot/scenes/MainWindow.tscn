@@ -10,12 +10,3 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_m441t")
-
-[node name="FileDialog" type="FileDialog" parent="."]
-title = "Open a File"
-initial_position = 1
-ok_button_text = "Open"
-file_mode = 0
-access = 2
-
-[connection signal="file_selected" from="FileDialog" to="." method="_on_file_dialog_file_selected"]
