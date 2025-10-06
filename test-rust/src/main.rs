@@ -2,6 +2,8 @@ use std::{env, io, process};
 use regex::Regex;
 use csv::{Writer, Reader};
 
+mod tools;
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     dbg!(&args);
@@ -12,8 +14,12 @@ fn main() {
     //let positives = vec!["a","b"];
     //let negatives = vec!["c","d"];
 
-    let positives = vec!["(:\\))", "(:\\-\\))", "(:D)"];
-    let negatives = vec!["(:\\()", "(:\\-\\()", "(D:)"];
+    let positives = tools::words_dictionnary_to_reg(args[1]);
+    let negatives = tools::words_dictionnary_to_reg(args[2]);
+    
+
+
+
 
     let mut positive_re = "(".to_string(); 
     for positive in positives.iter() {
