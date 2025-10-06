@@ -1,5 +1,4 @@
 use godot::prelude::*;
-
 use regex::Regex;
 use csv::{Writer, Reader};
 use core::hash;
@@ -25,13 +24,13 @@ impl INode for CleanData {
 impl CleanData {
     #[func]
     fn clean_data(&mut self, path: GString) -> GString {
-        if let Err(e) = self.clean_data_body(&path.to_string()) {
-            //println!("{:?}", e);
-        }
-        return path;
+        return match self.clean_data_body(&path.to_string()) {
+            Ok(temp_path) => GString::from(temp_path),
+            Err(e) => GString::from(e),
+        };
     }
 
-    fn clean_data_body(&mut self, data_path: &str) -> Result<String, &str>{
+    fn clean_data_body(&mut self, data_path: &str) -> Result<String, &str> {
         //let positives= vec!["😀", "😄", "😆", "😁", "🥰"];
         //let negatives = vec!["😡", "😤", "😠", "🤬", "😈", "👿", "💀", "☠"];
 
@@ -150,7 +149,7 @@ impl CleanData {
                         };
         }
 
-        Err("Couldn't open input / output files")
+        return Err("Couldn't open input/output");
     }
 
     #[signal]
