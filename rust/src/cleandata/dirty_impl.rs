@@ -51,7 +51,7 @@ impl TestTrait for CleanData {
         let user = format!("{start}@[^ ]*{end}");
         let punctuation = "[!\\?\\\"\\.;,\\:\\*]";
 
-        println!("{}", unvalid_emojis_re);
+        //println!("{}", unvalid_emojis_re);
 
         let mut urls_removed = 0;
         let mut mixed_emotions = 0;
@@ -68,7 +68,7 @@ impl TestTrait for CleanData {
                         
                         let re = Regex::new(&unvalid_emojis_re).unwrap();
                         if re.is_match(truc) {
-                            println!("mixed emotions : {:?}", truc);
+                            //println!("mixed emotions : {:?}", truc);
                             self.signals().log_sent().emit(&GString::from(format!("mixed emotions deleted : {:?}", truc)));
                             mixed_emotions += 1;
                             continue;
@@ -76,7 +76,7 @@ impl TestTrait for CleanData {
 
                         let re = Regex::new(&retweet).unwrap();
                         if re.is_match(truc) {
-                            println!("retweet deleted : {:?}", truc);
+                            //println!("retweet deleted : {:?}", truc);
                             retweets += 1;
                             continue;
                         }
@@ -86,27 +86,27 @@ impl TestTrait for CleanData {
                         let re = Regex::new(&url).unwrap();
                         if re.is_match(truc) {
                             test = re.replace_all(&test, "").to_string();
-                            println!("url trimed : {:?}", test);
+                            //println!("url trimed : {:?}", test);
                             urls_removed += 1;
                         }
 
                         let re = Regex::new(&user).unwrap();
                         if re.is_match(truc) {
                             test = re.replace_all(&test, "").to_string();
-                            println!("user trimed : {:?}", test);
+                            //println!("user trimed : {:?}", test);
                             users_removed += 1;
                         }
 
                         let re = Regex::new(&punctuation).unwrap();
                         if re.is_match(punctuation) {
                             test = re.replace_all(&test, "").to_string();
-                            println!("punctuation trimed : {:?}", test);
+                            //println!("punctuation trimed : {:?}", test);
                             punctuation_trimed += 1;
                         }
                         
                         wtr.write_record(&[rating, &test]);
 
-                        println!("mixed emotions : {mixed_emotions}\nurls trimed : {urls_removed}\nrts deleted: {retweets}\nusers trimed: {users_removed}\npunctuation trimed: {punctuation_trimed}");
+                        //println!("mixed emotions : {mixed_emotions}\nurls trimed : {urls_removed}\nrts deleted: {retweets}\nusers trimed: {users_removed}\npunctuation trimed: {punctuation_trimed}");
                         return match fs::canonicalize(PathBuf::from("clean_data_temp.csv")) {
                             Ok(path) => Ok(path.display().to_string()),
                             Err(e) => Err("Couldn't parse output file"),

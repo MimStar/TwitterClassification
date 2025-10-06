@@ -2,6 +2,7 @@ use godot::prelude::*;
 
 use regex::Regex;
 use csv::{Writer, Reader};
+use core::hash;
 use std::fs;
 use std::path::PathBuf;
 //mod dirty_impl;
@@ -25,7 +26,7 @@ impl CleanData {
     #[func]
     fn clean_data(&mut self, path: GString) -> GString {
         if let Err(e) = self.clean_data_body(&path.to_string()) {
-            println!("{:?}", e);
+            //println!("{:?}", e);
         }
         return path;
     }
@@ -69,14 +70,16 @@ impl CleanData {
         let url = format!("((http:)|https:|(www.))[^ ]*{end}");
         let user = format!("{start}@[^ ]*{end}");
         let punctuation = "[!\\?\\\"\\.;,\\:\\*]";
+        let hashtag = format!("{start}#[^ ]*{end}");
 
-        println!("{}", unvalid_emojis_re);
+        //println!("{}", unvalid_emojis_re);
 
         let mut urls_removed = 0;
         let mut mixed_emotions = 0;
         let mut retweets = 0;
         let mut users_removed = 0;
         let mut punctuation_trimed = 0;
+        let mut hashtag_trimed = 0;
 
         if let Ok(mut rdr) = Reader::from_path(data_path)
         && let Ok(mut wtr) = Writer::from_path("clean_data_temp.csv") {
@@ -87,7 +90,7 @@ impl CleanData {
                         
                         let re = Regex::new(&unvalid_emojis_re).unwrap();
                         if re.is_match(truc) {
-                            println!("mixed emotions : {:?}", truc);
+                            //println!("mixed emotions : {:?}", truc);
                             self.signals().log_sent().emit(&GString::from(format!("mixed emotions deleted : {:?}", truc)));
                             mixed_emotions += 1;
                             continue;
@@ -95,7 +98,7 @@ impl CleanData {
 
                         let re = Regex::new(&retweet).unwrap();
                         if re.is_match(truc) {
-                            println!("retweet deleted : {:?}", truc);
+                            //println!("retweet deleted : {:?}", truc);
                             self.signals().log_sent().emit(&GString::from(format!("retweet deleted : {:?}", truc)));
                             retweets += 1;
                             continue;
@@ -104,27 +107,35 @@ impl CleanData {
                         let mut test = String::from(truc);
 
                         let re = Regex::new(&url).unwrap();
-                        if re.is_match(truc) {
+                        if re.is_match(&test) {
                             test = re.replace_all(&test, "").to_string();
                             self.signals().log_sent().emit(&GString::from(format!("url trimed : {:?}", test)));
-                            println!("url trimed : {:?}", test);
+                            //println!("url trimed : {:?}", test);
                             urls_removed += 1;
                         }
 
                         let re = Regex::new(&user).unwrap();
-                        if re.is_match(truc) {
+                        if re.is_match(&test) {
                             test = re.replace_all(&test, "").to_string();
                             self.signals().log_sent().emit(&GString::from(format!("user trimed : {:?}", test)));
-                            println!("user trimed : {:?}", test);
+                            //println!("user trimed : {:?}", test);
                             users_removed += 1;
                         }
 
                         let re = Regex::new(&punctuation).unwrap();
-                        if re.is_match(punctuation) {
+                        if re.is_match(&test) {
                             test = re.replace_all(&test, "").to_string();
                             self.signals().log_sent().emit(&GString::from(format!("punctuation trimed : {:?}", test)));
-                            println!("punctuation trimed : {:?}", test);
+                            //println!("punctuation trimed : {:?}", test);
                             punctuation_trimed += 1;
+                        }
+
+                        let re = Regex::new(&hashtag).unwrap();
+                        if re.is_match(&test) {
+                            test = re.replace_all(&test, "").to_string();
+                            self.signals().log_sent().emit(&GString::from(format!("hashtag trimed : {:?}", test)));
+                            //println!("hashtag trimed : {:?}", test);
+                            hashtag_trimed += 1;
                         }
                         
                         wtr.write_record(&[rating, &test]);
@@ -132,7 +143,7 @@ impl CleanData {
                     }
                 }
             }
-            println!("mixed emotions : {mixed_emotions}\nurls trimed : {urls_removed}\nrts deleted: {retweets}\nusers trimed: {users_removed}\npunctuation trimed: {punctuation_trimed}");
+            //println!("mixed emotions : {mixed_emotions}\nurls trimed : {urls_removed}\nrts deleted: {retweets}\nusers trimed: {users_removed}\npunctuation trimed: {punctuation_trimed}\nhashtag trimed : {hashtag_trimed}");
             return match fs::canonicalize(PathBuf::from("clean_data_temp.csv")) {
                             Ok(path) => Ok(path.display().to_string()),
                             Err(e) => Err("Couldn't parse output file"),
