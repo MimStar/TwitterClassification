@@ -34,6 +34,7 @@ func add_logs_container():
 func _on_clean_csv_button_button_up():
 	filedialog = FileDialog.new()
 	filedialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	filedialog.access = FileDialog.ACCESS_FILESYSTEM
 	filedialog.title = "Open a csv file that contains tweets"
 	filedialog.file_selected.connect(_on_clean_csv_file_selected)
 	add_child(filedialog)
@@ -43,6 +44,7 @@ func _on_clean_csv_button_button_up():
 func _on_annotate_button_button_up():
 	filedialog = FileDialog.new()
 	filedialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	filedialog.access = FileDialog.ACCESS_FILESYSTEM
 	filedialog.title = "Open a positive words file"
 	filedialog.file_selected.connect(_on_positive_words_file_selected)
 	add_child(filedialog)
@@ -52,6 +54,7 @@ func _on_annotate_button_button_up():
 func _on_knn_button_button_up():
 	filedialog = FileDialog.new()
 	filedialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	filedialog.access = FileDialog.ACCESS_FILESYSTEM
 	filedialog.title = "Open a csv with tweets cleaned up to train the model"
 	filedialog.file_selected.connect(_on_knn_csv_file_selected)
 	add_child(filedialog)
@@ -72,6 +75,7 @@ func _on_positive_words_file_selected(path):
 	filedialog.queue_free()
 	filedialog = FileDialog.new()
 	filedialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	filedialog.access = FileDialog.ACCESS_FILESYSTEM
 	filedialog.title = "Open a negative words file"
 	filedialog.file_selected.connect(_on_negative_words_file_selected)
 	add_child(filedialog)
@@ -83,6 +87,7 @@ func _on_negative_words_file_selected(path):
 	filedialog.queue_free()
 	filedialog = FileDialog.new()
 	filedialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	filedialog.access = FileDialog.ACCESS_FILESYSTEM
 	filedialog.title = "Open a csv file to annotate"
 	filedialog.file_selected.connect(_on_annotate_file_selected)
 	add_child(filedialog)
