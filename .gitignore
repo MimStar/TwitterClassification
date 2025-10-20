@@ -2,4 +2,4 @@ test-rust/target
 rust/target
 godot/.godot/
 godot/android/
-godot/clean_data_temp.csv
+godot/clean_data_temp.*
