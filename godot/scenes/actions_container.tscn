@@ -34,3 +34,10 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 theme = ExtResource("1_s7unr")
 text = "KNN Algorithm"
+
+[node name="KMeansButton" type="Button" parent="FlowContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme = ExtResource("1_s7unr")
+text = "Kmeans Algorithm"

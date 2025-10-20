@@ -2,7 +2,7 @@ extends Control
 
 const main_theme = preload("res://assets/main_theme.tres")
 
-var csv_path = "/home/remi/twitterclassification/testdata.manual.2009.06.14.csv"
+var csv_path = ""
 var data = []
 
 func _ready():
