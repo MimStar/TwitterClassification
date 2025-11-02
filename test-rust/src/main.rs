@@ -1,6 +1,14 @@
-use std::{borrow::Cow, collections::HashMap, env, io, process};
-use regex::{Regex};
-use csv::{Writer, Reader};
+use num_traits::NumCast;
+use regex::Regex;
+use csv::{Reader, StringRecord, Writer};
+use std::env;
+use std::error::Error;
+use std::fs::{self, File};
+use std::path::PathBuf;
+
+use crate::tools::words_dictionnary_to_reg;
+
+mod tools;
 
 use crate::{regex_ext::RegexLogicalBuilder, rule_filter::RuleFilter};
 
@@ -9,106 +17,62 @@ mod rule_filter;
 
 fn main() -> Result<(), String>{
     let args: Vec<String> = env::args().collect();
-    dbg!(&args);
+    naive_annotation(&args[1], &args[2], &args[3]);
+}
 
-    //let positives= vec!["😀", "😄", "😆", "😁", "🥰"];
-    //let negatives = vec!["😡", "😤", "😠", "🤬", "😈", "👿", "💀", "☠"];
+fn naive_annotation(data_path: &str, positive_path: &str, negative_path: &str) -> Result<String, Box<dyn Error>> {
+    let pos_reg = words_dictionnary_to_reg(&positive_path)?;
+    let neg_reg = words_dictionnary_to_reg(&negative_path)?;
 
-    //let positives = vec!["a","b"];
-    //let negatives = vec!["c","d"];
+    let mut rdr = Reader::from_path(data_path)?;
+    let mut wtr = Writer::from_path("naive_annotation.csv")?;
 
-    let positives = vec!["(:\\))", "(:\\-\\))", "(:D)"];
-    let negatives = vec!["(:\\()", "(:\\-\\()", "(D:)"];
+    rdr.records().into_iter().for_each(|record| {
+        let ex_record =  record.unwrap();
+        record_analysis(ex_record, &pos_reg, &neg_reg, &mut wtr, 5);
+    });
 
-    let unvalid_emojis_re = RegexLogicalBuilder::new()
-                                    .contains(RegexLogicalBuilder::new()
-                                        .any_of(RegexLogicalBuilder::strings_to_builders(&positives))
-                                        .one_or_more()
-                                        .and(RegexLogicalBuilder::new()
-                                            .any_of(RegexLogicalBuilder::strings_to_builders(&negatives))
-                                            .one_or_more()))
-                                    .build().unwrap();
 
-    let retweet = RegexLogicalBuilder::from("RT").as_whole_word().build().unwrap();
+    let path = fs::canonicalize(PathBuf::from("naive_annotation.csv"))?;
+    Ok(path.display().to_string())
+}
 
-    let url_list = vec!["http:", "https:", "www."];
-    let url = RegexLogicalBuilder::new()
-                    .any_of(RegexLogicalBuilder::strings_to_builders(&url_list))
-                    .group()
-                    .plus_non_space()
-                    .any_times()
-                    .as_word_end()
-                    .build().unwrap();
+fn record_analysis(record: StringRecord, pos_reg: &Vec<String>, neg_reg: &Vec<String>, wtr: &mut Writer<File>, obj_col: usize) -> Result<(), Box<dyn Error>> {
+    let obj = record.get(obj_col).ok_or(format!("No column {obj_col} found"))?;
 
-    let user = RegexLogicalBuilder::from("@")
-                    .plus_non_space()
-                    .any_times()
-                    .as_whole_word()
-                    .build().unwrap();
-
-    let punctuation = Regex::new("[!\\?\\\"\\.;,\\:\\*]").unwrap();
-
-    let filters = vec![
-        RuleFilter::DELETE("mixed emotions".to_string() ,unvalid_emojis_re),
-        RuleFilter::DELETE("retweet".to_string(), retweet),
-        RuleFilter::TRIM("url".to_string(), url),
-        RuleFilter::TRIM("user".to_string(), user),
-        RuleFilter::TRIM("punctuation".to_string(), punctuation)
-    ];
-
-    let mut filter_counters: HashMap<&RuleFilter, u32> = filters.iter().map(|filter| (filter, 0)).collect();
-
-    let mut urls_removed = 0;
-    let mut mixed_emotions = 0;
-    let mut retweets = 0;
-    let mut users_removed = 0;
-    let mut punctuation_trimed = 0;
-
-    let mut rdr = Reader::from_path(&args[1]).map_err(|e| format!("Couldn't open {} for read - {e}", &args[1]))?;
-
-    if let Ok(mut rdr) = Reader::from_path(&args[1])
-    && let Ok(mut wtr) = Writer::from_path(&args[2]) {
-        for result in rdr.records() {
-            if let Ok(record) = result {
-                if let Some(mut truc) = record.get(5)
-                && let Some(mut rating) = record.get(0) {
-                    let mut processed_entry = String::from(truc);
-                    for filter in &filters {
-                        let mut logs = None;
-                        let filtered_result = filter.apply_with_logs(&mut processed_entry, &mut logs);
-                        if let Some(log_msg) = logs {
-                            println!("{log_msg}");
-                            if let Some(counter) = filter_counters.get_mut(filter) {
-                                *counter += 1; 
-                            }
-                        }
-
-                        match filtered_result {
-                            None => break,
-                            Some(passed) => {
-                                if let Cow::Owned(new_value) = passed {
-                                    processed_entry = new_value;
-                                }
-                            }
-                        }
-                    }
-
-                    wtr.write_record(&[rating, &processed_entry]);
-                }
-            }
+    let mut positives: u32 = 0;
+    let mut negatives: u32 = 0;
+    obj.split(" ").into_iter().for_each(|mut word| {
+        word = word.trim();
+        if pos_reg.contains(&word.to_string()) {
+            positives += 1;
+        } else if neg_reg.contains(&word.to_string()) {
+            negatives += 1;
         }
-    }
+    });
 
-    for (filter, counter) in filter_counters {
-        println!("{} : {counter}", filter.name());
-    }
+    let rating = compute_polarity_with_weight(negatives, positives, 0_f32)?;
+
+    wtr.write_record(&[format!("{rating}").as_str(), obj]);
 
     Ok(())
 }
 
-fn rem_last(value: &str) -> &str {
-    let mut chars = value.chars();
-    chars.next_back();
-    chars.as_str()
+// weight is between 0 and 1
+// 0 means if positives > negatives, polarity is 4, and vice versa
+// 1 means polarity is 0/4 if there is exclusively negative or positive words respectively, 2 otherwise.
+fn compute_polarity_with_weight(negatives: u32, positives: u32, weight: f32) -> Result<u32, Box<dyn Error>> {
+    let f_negatives : f32 = NumCast::from(negatives).ok_or(format!("Cannot cast {negatives} to f32"))?;
+    let f_positives : f32 = NumCast::from(positives).ok_or(format!("Cannot cast {positives} to f32"))?;
+    let f_total = f_negatives + f_positives;
+
+    //println!("{}", f_negatives);
+    //println!("{}", f_positives);
+    
+    let pos_ratio = f_positives / f_total;
+    if pos_ratio > weight || pos_ratio == 1_f32 { return Ok(4);}
+    let neg_ratio = f_negatives / f_total;
+    if neg_ratio > weight || neg_ratio == 1_f32 { return Ok(0);}
+
+    Ok(2)
 }
-// Rand index
