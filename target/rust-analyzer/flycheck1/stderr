@@ -1,0 +1,60 @@
+   0.333792700s  INFO prepare_target{force=false package_id=test-rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\test-rust) target="test-rust"}: cargo::core::compiler::fingerprint: fingerprint error for test-rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\test-rust)/Check { test: false }/TargetInner { name: "test-rust", doc: true, ..: with_path("\\\\wsl.localhost\\Ubuntu\\home\\leklo\\m1\\pje\\TwitterClassification\\test-rust\\src\\main.rs", Edition2024) }
+   0.333837900s  INFO prepare_target{force=false package_id=test-rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\test-rust) target="test-rust"}: cargo::core::compiler::fingerprint:     err: failed to read `\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\test-rust\target\debug\.fingerprint\test-rust-40a26f8426748c74\bin-test-rust`
+
+Caused by:
+    Le fichier spécifié est introuvable. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_path
+   6: git_filter_source_path
+   7: git_filter_source_path
+   8: git_filter_source_path
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: <unknown>
+  15: <unknown>
+  16: git_midx_writer_dump
+  17: git_filter_source_repo
+  18: git_midx_writer_dump
+  19: BaseThreadInitThunk
+  20: RtlUserThreadStart
+   0.579967400s  INFO prepare_target{force=false package_id=test-rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\test-rust) target="test-rust"}: cargo::core::compiler::fingerprint: fingerprint error for test-rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\test-rust)/Check { test: true }/TargetInner { name: "test-rust", doc: true, ..: with_path("\\\\wsl.localhost\\Ubuntu\\home\\leklo\\m1\\pje\\TwitterClassification\\test-rust\\src\\main.rs", Edition2024) }
+   0.579999900s  INFO prepare_target{force=false package_id=test-rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\test-rust) target="test-rust"}: cargo::core::compiler::fingerprint:     err: failed to read `\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\test-rust\target\debug\.fingerprint\test-rust-8359298ba9156e11\test-bin-test-rust`
+
+Caused by:
+    Le fichier spécifié est introuvable. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_path
+   6: git_filter_source_path
+   7: git_filter_source_path
+   8: git_filter_source_path
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: <unknown>
+  15: <unknown>
+  16: git_midx_writer_dump
+  17: git_filter_source_repo
+  18: git_midx_writer_dump
+  19: BaseThreadInitThunk
+  20: RtlUserThreadStart
+    Checking test-rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\test-rust)
+error: could not compile `test-rust` (bin "test-rust") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `test-rust` (bin "test-rust" test) due to 1 previous error
