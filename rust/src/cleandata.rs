@@ -6,6 +6,7 @@ use std::fs;
 use std::path::PathBuf;
 //mod dirty_impl;
 
+mod clean_rule;
 
 #[derive(GodotClass)]
 #[class(base=Node)]
