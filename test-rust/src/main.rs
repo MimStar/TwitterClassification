@@ -1,10 +1,11 @@
-use std::{env, io, process};
+use std::{borrow::Cow, collections::HashMap, env, io, process};
 use regex::{Regex};
 use csv::{Writer, Reader};
 
-use crate::regex_ext::RegexLogicalBuilder;
+use crate::{regex_ext::RegexLogicalBuilder, rule_filter::RuleFilter};
 
 mod regex_ext;
+mod rule_filter;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -25,37 +26,37 @@ fn main() {
                                         .one_or_more()
                                         .and(RegexLogicalBuilder::new()
                                             .any_of(RegexLogicalBuilder::strings_to_builders(&negatives))
-                                            .one_or_more()));
+                                            .one_or_more()))
+                                    .build().unwrap();
 
+    let retweet = RegexLogicalBuilder::from("RT").as_whole_word().build().unwrap();
 
-    let start = "(( )|^)";
-    let end = "( |$)";
-
-    let retweet = RegexLogicalBuilder::from("RT").as_whole_word();
-
-    //let retweet = format!("{start}RT{end}");
-    //let url = format!("((http:)|https:|(www.))[^ ]*{end}");
     let url_list = vec!["http:", "https:", "www."];
-
     let url = RegexLogicalBuilder::new()
                     .any_of(RegexLogicalBuilder::strings_to_builders(&url_list))
                     .group()
                     .plus_non_space()
                     .any_times()
-                    .as_word_end();
-
-    //let user = format!("{start}@[^ ]*{end}");
+                    .as_word_end()
+                    .build().unwrap();
 
     let user = RegexLogicalBuilder::from("@")
                     .plus_non_space()
                     .any_times()
-                    .as_whole_word();
+                    .as_whole_word()
+                    .build().unwrap();
 
-    let punctuation = "[!\\?\\\"\\.;,\\:\\*]";
+    let punctuation = Regex::new("[!\\?\\\"\\.;,\\:\\*]").unwrap();
 
-    let str : String = (&unvalid_emojis_re).into();
-    //let str = unvalid_emojis_re;
-    //println!("{}", &unvalid_emojis_re);
+    let filters = vec![
+        RuleFilter::DELETE("mixed emotions".to_string() ,unvalid_emojis_re),
+        RuleFilter::DELETE("retweet".to_string(), retweet),
+        RuleFilter::TRIM("url".to_string(), url),
+        RuleFilter::TRIM("user".to_string(), user),
+        RuleFilter::TRIM("punctuation".to_string(), punctuation)
+    ];
+
+    let mut filter_counters: HashMap<&RuleFilter, u32> = filters.iter().map(|filter| (filter, 0)).collect();
 
     let mut urls_removed = 0;
     let mut mixed_emotions = 0;
@@ -69,54 +70,36 @@ fn main() {
             if let Ok(record) = result {
                 if let Some(mut truc) = record.get(5)
                 && let Some(mut rating) = record.get(0) {
-                    
-                    //let re = Regex::new(&unvalid_emojis_re).unwrap();
-                    let re = unvalid_emojis_re.build().unwrap();
-                    if re.is_match(truc) {
-                        println!("mixed emotions : {:?}", truc);
-                        mixed_emotions += 1;
-                        continue;
+                    let mut processed_entry = String::from(truc);
+                    for filter in &filters {
+                        let mut logs = None;
+                        let filtered_result = filter.apply_with_logs(&mut processed_entry, &mut logs);
+                        if let Some(log_msg) = logs {
+                            println!("{log_msg}");
+                            if let Some(counter) = filter_counters.get_mut(filter) {
+                                *counter += 1; 
+                            }
+                        }
+
+                        match filtered_result {
+                            None => break,
+                            Some(passed) => {
+                                if let Cow::Owned(new_value) = passed {
+                                    processed_entry = new_value;
+                                }
+                            }
+                        }
                     }
 
-                    //let re = Regex::new(&retweet).unwrap();
-                    let re = retweet.build().unwrap();
-                    if re.is_match(truc) {
-                        println!("retweet deleted : {:?}", truc);
-                        retweets += 1;
-                        continue;
-                    }
-
-                    let mut test = String::from(truc);
-
-                    //let re = Regex::new(&url).unwrap();
-                    let re = url.build().unwrap();
-                    if re.is_match(truc) {
-                        test = re.replace_all(&test, "").to_string();
-                        println!("url trimed : {:?}", test);
-                        urls_removed += 1;
-                    }
-
-                    //let re = Regex::new(&user).unwrap();
-                    let re = user.build().unwrap();
-                    if re.is_match(truc) {
-                        test = re.replace_all(&test, "").to_string();
-                        println!("user trimed : {:?}", test);
-                        users_removed += 1;
-                    }
-
-                    let re = Regex::new(&punctuation).unwrap();
-                    if re.is_match(punctuation) {
-                        test = re.replace_all(&test, "").to_string();
-                        println!("punctuation trimed : {:?}", test);
-                        punctuation_trimed += 1;
-                    }
-
-                    wtr.write_record(&[rating, &test]);
+                    wtr.write_record(&[rating, &processed_entry]);
                 }
             }
         }
     }
-    println!("mixed emotions : {mixed_emotions}\nurls trimed : {urls_removed}\nrts deleted: {retweets}\nusers trimed: {users_removed}\npunctuation trimed: {punctuation_trimed}");
+
+    for (filter, counter) in filter_counters {
+        println!("{} : {counter}", filter.name());
+    }
 }
 
 fn rem_last(value: &str) -> &str {
