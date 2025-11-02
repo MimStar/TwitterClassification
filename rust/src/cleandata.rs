@@ -32,7 +32,10 @@ impl CleanData {
     fn clean_data(&mut self, path: GString) -> GString {
         return match self.clean_data_body(&path.to_string()) {
             Ok(temp_path) => GString::from(temp_path),
-            Err(e) => GString::from(e),
+            Err(e) => {
+                self.signals().log_sent().emit(&GString::from(e));
+                return GString::from("");
+            },
         };
     }
 
