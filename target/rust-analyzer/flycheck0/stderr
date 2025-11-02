@@ -1,5 +1,5 @@
-   1.843818200s  INFO prepare_target{force=false package_id=rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\rust) target="rust"}: cargo::core::compiler::fingerprint: fingerprint error for rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\rust)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("rust", ["cdylib"], "\\\\wsl.localhost\\Ubuntu\\home\\leklo\\m1\\pje\\TwitterClassification\\rust\\src\\lib.rs", Edition2024) }
-   1.843869400s  INFO prepare_target{force=false package_id=rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\rust) target="rust"}: cargo::core::compiler::fingerprint:     err: failed to read `\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\rust\target\debug\.fingerprint\rust-5a5586159c83f87a\lib-rust`
+   1.635425800s  INFO prepare_target{force=false package_id=rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\rust) target="rust"}: cargo::core::compiler::fingerprint: fingerprint error for rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\rust)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("rust", ["cdylib"], "\\\\wsl.localhost\\Ubuntu\\home\\leklo\\m1\\pje\\TwitterClassification\\rust\\src\\lib.rs", Edition2024) }
+   1.635474500s  INFO prepare_target{force=false package_id=rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\rust) target="rust"}: cargo::core::compiler::fingerprint:     err: failed to read `\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\rust\target\debug\.fingerprint\rust-5a5586159c83f87a\lib-rust`
 
 Caused by:
     Le fichier spécifié est introuvable. (os error 2)
@@ -26,8 +26,8 @@ Stack backtrace:
   18: git_midx_writer_dump
   19: BaseThreadInitThunk
   20: RtlUserThreadStart
-   2.507894000s  INFO prepare_target{force=false package_id=rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\rust) target="rust"}: cargo::core::compiler::fingerprint: fingerprint error for rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\rust)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("rust", ["cdylib"], "\\\\wsl.localhost\\Ubuntu\\home\\leklo\\m1\\pje\\TwitterClassification\\rust\\src\\lib.rs", Edition2024) }
-   2.507930200s  INFO prepare_target{force=false package_id=rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\rust) target="rust"}: cargo::core::compiler::fingerprint:     err: failed to read `\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\rust\target\debug\.fingerprint\rust-cea51b6543f729e4\test-lib-rust`
+   2.289792500s  INFO prepare_target{force=false package_id=rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\rust) target="rust"}: cargo::core::compiler::fingerprint: fingerprint error for rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\rust)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("rust", ["cdylib"], "\\\\wsl.localhost\\Ubuntu\\home\\leklo\\m1\\pje\\TwitterClassification\\rust\\src\\lib.rs", Edition2024) }
+   2.289824700s  INFO prepare_target{force=false package_id=rust v0.1.0 (\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\rust) target="rust"}: cargo::core::compiler::fingerprint:     err: failed to read `\\wsl.localhost\Ubuntu\home\leklo\m1\pje\TwitterClassification\rust\target\debug\.fingerprint\rust-cea51b6543f729e4\test-lib-rust`
 
 Caused by:
     Le fichier spécifié est introuvable. (os error 2)

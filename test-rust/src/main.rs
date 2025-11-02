@@ -7,7 +7,7 @@ use crate::{regex_ext::RegexLogicalBuilder, rule_filter::RuleFilter};
 mod regex_ext;
 mod rule_filter;
 
-fn main() {
+fn main() -> Result<(), String>{
     let args: Vec<String> = env::args().collect();
     dbg!(&args);
 
@@ -64,6 +64,8 @@ fn main() {
     let mut users_removed = 0;
     let mut punctuation_trimed = 0;
 
+    let mut rdr = Reader::from_path(&args[1]).map_err(|e| format!("Couldn't open {} for read - {e}", &args[1]))?;
+
     if let Ok(mut rdr) = Reader::from_path(&args[1])
     && let Ok(mut wtr) = Writer::from_path(&args[2]) {
         for result in rdr.records() {
@@ -100,6 +102,8 @@ fn main() {
     for (filter, counter) in filter_counters {
         println!("{} : {counter}", filter.name());
     }
+
+    Ok(())
 }
 
 fn rem_last(value: &str) -> &str {
