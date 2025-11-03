@@ -1,7 +1,6 @@
 use godot::prelude::*;
 use regex::Regex;
 use csv::{Writer, Reader};
-use core::hash;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fs;
@@ -130,7 +129,7 @@ impl CleanData {
                         }
                     }
                 } else {   // No filter left, and data remaining
-                    wtr.write_record(&[&rating, &processed_entry]);
+                    wtr.write_record(&[&rating, &processed_entry]).map_err(|e| format!("Coudln't write the current record - {:?} : {e}", [&rating, &processed_entry]))?;
                     break;
                 }
             }
@@ -138,17 +137,10 @@ impl CleanData {
         
         return match fs::canonicalize(PathBuf::from("clean_data_temp.csv")) {
                         Ok(path) => Ok(path.display().to_string()),
-                        Err(e) => Err("Couldn't parse output file".to_string()),
+                        Err(e) => Err(format!("Couldn't parse output file - {e}")),
                     };
     }
 
     #[signal]
     fn log_sent(message : GString);
 }
-
-fn rem_last(value: &str) -> &str {
-    let mut chars = value.chars();
-    chars.next_back();
-    chars.as_str()
-}
-// # !!!

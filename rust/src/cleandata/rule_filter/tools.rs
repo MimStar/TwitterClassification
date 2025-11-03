@@ -6,8 +6,8 @@ impl RuleFilter {
     pub fn name(&self) -> String {
         match self {
             RuleFilter::TRIM(name, _) => name.to_string() + " trim",
-            RuleFilter::REPLACE(name, regex, _) => name.to_string() + " replacement",
-            RuleFilter::DELETE(name, regex) => name.to_string() + " deletion",
+            RuleFilter::REPLACE(name, _, _) => name.to_string() + " replacement",
+            RuleFilter::DELETE(name, _) => name.to_string() + " deletion",
         }
     }
     // Such as if there are multiple rules in a list with same pattern, delete is prioritary (since more restrictive)

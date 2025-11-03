@@ -1,5 +1,4 @@
 use chardetng::EncodingDetector;
-use encoding_rs::Encoding;
 
 pub fn detect_and_decode(bytes: &[u8]) -> (String, &'static str) {
     // Detect encoding
@@ -8,7 +7,7 @@ pub fn detect_and_decode(bytes: &[u8]) -> (String, &'static str) {
     let encoding = detector.guess(None, true);
 
     // Decode bytes
-    let (decoded, _, had_errors) = encoding.decode(bytes);
+    let (decoded, _, _) = encoding.decode(bytes);
 
     //println!("Detected encoding: {}, had_errors: {}", encoding.name(), had_errors);
     (decoded.into_owned(), encoding.name())

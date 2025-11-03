@@ -31,7 +31,7 @@ impl RegexLogicalBuilder {
             self.proc_result += &(re.group().proc_result + "|");
         }
 
-        let mut chars = &mut self.proc_result.chars();
+        let chars = &mut self.proc_result.chars();
         chars.next_back();
         self.proc_result = String::from(chars.as_str());
         self

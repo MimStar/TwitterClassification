@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use std::ops::Add;
 
 use crate::regex_ext::builder::RegexLogicalBuilder;

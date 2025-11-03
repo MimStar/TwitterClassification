@@ -1,11 +1,10 @@
-use std::io::{self, BufRead, BufReader};
-use std::fs::{self, File};
+use std::fs;
 use csv::Error;
-use regex::Regex;
 
 pub fn words_dictionnary_to_reg(path: &str) -> Result<Vec<String>, Error> {
-    let f = File::open(path)?;
     /*
+    let f = File::open(path)?;
+    
     TO DO, build list word per word instead of dumping then processing
     
     let mut rdr = BufReader::new(f);
@@ -46,10 +45,10 @@ pub fn words_dictionnary_to_vec(path: String, content_column: usize, polarity_co
             let re = Regex::new()
         });
     }
-}*/
+}
 
 fn rem_last(value: &str) -> &str {
     let mut chars = value.chars();
     chars.next_back();
     chars.as_str()
-}
+}*/
