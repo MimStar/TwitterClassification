@@ -43,7 +43,67 @@ impl CleanData {
         };
     }
 
+    fn clean_data_generic(&mut self, input_path: &str, output_path: &str, data_col: usize, rating_col: usize, filters: &Vec<RuleFilter>) -> Result<String, String> {
+        let mut filter_counters: HashMap<&RuleFilter, u32> = filters.iter().map(|filter| (filter, 0)).collect();
+
+        let mut rdr = Reader::from_path(input_path).map_err(|e|
+            format!("Couldn't open {input_path} for read - {e}"))?;
+        let mut wtr = Writer::from_path(output_path).map_err(|e|
+            format!("Couldn't open {output_path} for write - {e}"))?;
+
+        for result in rdr.byte_records() { // Byte records instead, then convert
+
+            let record = result.map_err(|e| format!("Couldn't read entry in input csv - {e}"))?;
+            let tweet = record.get(data_col).ok_or(
+                format!("Message column not found in record {record:?}"))?;
+            let (tweet, _) = encoding::detect_and_decode(tweet);
+
+            let rating = record.get(rating_col).ok_or(
+                format!("Rating column not found in record {record:?}"))?;
+            let (rating, _) = encoding::detect_and_decode(rating);
+            
+
+            let mut processed_entry = String::from(tweet);
+            let mut filters_iter = filters.iter();
+
+            loop {
+                // Still filter left to apply
+                if let Some(filter) = filters_iter.next() {
+                    let mut logs = None;
+                    let filtered_result = filter.apply_with_logs(&mut processed_entry, &mut logs);
+                    if let Some(log_msg) = logs {
+                        println!("{log_msg}");
+                        self.signals().log_sent().emit(&GString::from(log_msg));
+                        if let Some(counter) = filter_counters.get_mut(filter) {
+                            *counter += 1; 
+                        }
+                    }
+
+                    match filtered_result {
+                        // The filters restricted the data up to the point there's no data anymore
+                        // We should break without recording it then.
+                        None => break,
+                        Some(passed) => {
+                            if let Cow::Owned(new_value) = passed {
+                                processed_entry = new_value;
+                            }
+                        }
+                    }
+                } else {   // No filter left, and data remaining
+                    wtr.write_record(&[&rating, &processed_entry]).map_err(|e| format!("Coudln't write the current record - {:?} : {e}", [&rating, &processed_entry]))?;
+                    break;
+                }
+            }
+        }
+        
+        return match fs::canonicalize(PathBuf::from(output_path)) {
+                        Ok(path) => Ok(path.display().to_string()),
+                        Err(e) => Err(format!("Couldn't parse output file - {e}")),
+                    };
+    }
+
     fn clean_data_body(&mut self, data_path: &str) -> Result<String, String> {
+        // AUTO FILTERS GENERATION
         let positives = vec!["(:\\))", "(:\\-\\))", "(:D)"];    //
         let negatives = vec!["(:\\()", "(:\\-\\()", "(D:)"];    // These should ideally be parametrized ?
 
@@ -83,62 +143,8 @@ impl CleanData {
             RuleFilter::TRIM("punctuation".to_string(), punctuation)
         ];
 
-        let mut filter_counters: HashMap<&RuleFilter, u32> = filters.iter().map(|filter| (filter, 0)).collect();
-
-        let mut rdr = Reader::from_path(data_path).map_err(|e|
-            format!("Couldn't open {data_path} for read - {e}"))?;
-        let mut wtr = Writer::from_path("clean_data_temp.csv").map_err(|e|
-            format!("Couldn't open clean_data_temp.csv for write - {e}"))?;
-
-        for result in rdr.byte_records() { // Byte records instead, then convert
-
-            let record = result.map_err(|e| format!("Couldn't read entry in input csv - {e}"))?;
-            let tweet = record.get(TWEET_COL).ok_or(
-                format!("Message column not found in record {record:?}"))?;
-            let (tweet, _) = encoding::detect_and_decode(tweet);
-
-            let rating = record.get(RATING_COL).ok_or(
-                format!("Rating column not found in record {record:?}"))?;
-            let (rating, _) = encoding::detect_and_decode(rating);
-            
-            let mut processed_entry = String::from(tweet);
-
-            let mut filters_iter = filters.iter();
-
-            loop {
-                // Still filter left to apply
-                if let Some(filter) = filters_iter.next() {
-                    let mut logs = None;
-                    let filtered_result = filter.apply_with_logs(&mut processed_entry, &mut logs);
-                    if let Some(log_msg) = logs {
-                        println!("{log_msg}");
-                        self.signals().log_sent().emit(&GString::from(log_msg));
-                        if let Some(counter) = filter_counters.get_mut(filter) {
-                            *counter += 1; 
-                        }
-                    }
-
-                    match filtered_result {
-                        // The filters restricted the data up to the point there's no data anymore
-                        // We should break without recording it then.
-                        None => break,
-                        Some(passed) => {
-                            if let Cow::Owned(new_value) = passed {
-                                processed_entry = new_value;
-                            }
-                        }
-                    }
-                } else {   // No filter left, and data remaining
-                    wtr.write_record(&[&rating, &processed_entry]).map_err(|e| format!("Coudln't write the current record - {:?} : {e}", [&rating, &processed_entry]))?;
-                    break;
-                }
-            }
-        }
-        
-        return match fs::canonicalize(PathBuf::from("clean_data_temp.csv")) {
-                        Ok(path) => Ok(path.display().to_string()),
-                        Err(e) => Err(format!("Couldn't parse output file - {e}")),
-                    };
+        // CALL WITH GENERATED FILTERS AND STATIC COLUMNS
+        self.clean_data_generic(data_path, "clean_data_temp.csv", TWEET_COL, RATING_COL, &filters)
     }
 
     #[signal]
