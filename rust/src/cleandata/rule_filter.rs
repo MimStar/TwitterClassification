@@ -12,6 +12,8 @@ pub enum RuleFilter {
     DELETE(String, Regex),          // delete entry if matching
 }
 
+// Maybe extend the rule filters so they can be applied to any column of the csv.
+
 mod external;
 mod tools;
 
