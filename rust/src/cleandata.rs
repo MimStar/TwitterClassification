@@ -11,7 +11,12 @@ use crate::cleandata::rule_filter::RuleFilter;
 use crate::regex_ext::builder::RegexLogicalBuilder;
 //mod dirty_impl;
 
+use crate::csv_ext::encoding;
+
 mod rule_filter;
+
+const TWEET_COL: usize = 1;
+const RATING_COL: usize = 0;
 
 #[derive(GodotClass)]
 #[class(base=Node)]
@@ -40,8 +45,8 @@ impl CleanData {
     }
 
     fn clean_data_body(&mut self, data_path: &str) -> Result<String, String> {
-        let positives = vec!["(:\\))", "(:\\-\\))", "(:D)"];
-        let negatives = vec!["(:\\()", "(:\\-\\()", "(D:)"];
+        let positives = vec!["(:\\))", "(:\\-\\))", "(:D)"];    //
+        let negatives = vec!["(:\\()", "(:\\-\\()", "(D:)"];    // These should ideally be parametrized ?
 
         let unvalid_emojis_re = RegexLogicalBuilder::new()
             .contains(RegexLogicalBuilder::new()
@@ -86,37 +91,49 @@ impl CleanData {
         let mut wtr = Writer::from_path("clean_data_temp.csv").map_err(|e|
             format!("Couldn't open clean_data_temp.csv for write - {e}"))?;
 
-        for result in rdr.records() {
+        for result in rdr.byte_records() { // Byte records instead, then convert
+
             let record = result.map_err(|e| format!("Couldn't read entry in input csv - {e}"))?;
-            let tweet = record.get(5).ok_or(
+            let tweet = record.get(TWEET_COL).ok_or(
                 format!("Message column not found in record {record:?}"))?;
+            let (tweet, _) = encoding::detect_and_decode(tweet);
 
-            let rating = record.get(0).ok_or(
+            let rating = record.get(RATING_COL).ok_or(
                 format!("Rating column not found in record {record:?}"))?;
-
+            let (rating, _) = encoding::detect_and_decode(rating);
+            
             let mut processed_entry = String::from(tweet);
-            for filter in &filters {
-                let mut logs = None;
-                let filtered_result = filter.apply_with_logs(&mut processed_entry, &mut logs);
-                if let Some(log_msg) = logs {
-                    println!("{log_msg}");
-                    self.signals().log_sent().emit(&GString::from(log_msg));
-                    if let Some(counter) = filter_counters.get_mut(filter) {
-                        *counter += 1; 
-                    }
-                }
 
-                match filtered_result {
-                    None => break,
-                    Some(passed) => {
-                        if let Cow::Owned(new_value) = passed {
-                            processed_entry = new_value;
+            let mut filters_iter = filters.iter();
+
+            loop {
+                // Still filter left to apply
+                if let Some(filter) = filters_iter.next() {
+                    let mut logs = None;
+                    let filtered_result = filter.apply_with_logs(&mut processed_entry, &mut logs);
+                    if let Some(log_msg) = logs {
+                        println!("{log_msg}");
+                        self.signals().log_sent().emit(&GString::from(log_msg));
+                        if let Some(counter) = filter_counters.get_mut(filter) {
+                            *counter += 1; 
                         }
                     }
+
+                    match filtered_result {
+                        // The filters restricted the data up to the point there's no data anymore
+                        // We should break without recording it then.
+                        None => break,
+                        Some(passed) => {
+                            if let Cow::Owned(new_value) = passed {
+                                processed_entry = new_value;
+                            }
+                        }
+                    }
+                } else {   // No filter left, and data remaining
+                    wtr.write_record(&[&rating, &processed_entry]);
+                    break;
                 }
             }
-
-            wtr.write_record(&[rating, &processed_entry]);
         }
         
         return match fs::canonicalize(PathBuf::from("clean_data_temp.csv")) {
