@@ -15,9 +15,11 @@ use crate::{regex_ext::RegexLogicalBuilder, rule_filter::RuleFilter};
 mod regex_ext;
 mod rule_filter;
 
-fn main() -> Result<(), String>{
-    let args: Vec<String> = env::args().collect();
-    naive_annotation(&args[1], &args[2], &args[3]);
+fn main() {
+    //let args: Vec<String> = env::args().collect();
+    //naive_annotation(&args[1], &args[2], &args[3]);
+    let test = "?[]";
+    println!("{}", RegexLogicalBuilder::protect_string(test));
 }
 
 fn naive_annotation(data_path: &str, positive_path: &str, negative_path: &str) -> Result<String, Box<dyn Error>> {

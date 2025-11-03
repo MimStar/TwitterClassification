@@ -43,6 +43,14 @@ impl Add<String> for RegexLogicalBuilder {
 }
 
 impl RegexLogicalBuilder {
+    const SPECIAL_CHARS_RE: &'static str = r"(?P<c>[\/\\\?\:\*\+\[\]\.\|\$\^=\!<>])";
+
+    pub fn protect_string(input: &str) -> String {
+        let re = Regex::new(RegexLogicalBuilder::SPECIAL_CHARS_RE).unwrap();
+        let processed = re.replace_all(input, r"\$c");
+        processed.into()
+    }
+
     pub fn strings_to_builders(strings: &Vec<&str>) -> Vec<RegexLogicalBuilder> {
         strings.into_iter().map(|s| RegexLogicalBuilder::from(*s)).collect()
     }

@@ -13,6 +13,7 @@ mod basics;
 mod quick_hands;
 mod advanced;
 mod tools;
+mod parse;
 
 impl RegexLogicalBuilder {
     pub fn new() -> Self {
