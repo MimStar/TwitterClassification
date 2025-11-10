@@ -134,7 +134,7 @@ fn generate_dendrogram_visualization(
     output.push_str("Cluster1 | Cluster2 | Dissimilarité | Taille\n");
     output.push_str("---------|----------|---------------|-------\n");
     
-    for (step_idx, step) in dendrogram.steps().iter().enumerate() {
+    for (_step_idx, step) in dendrogram.steps().iter().enumerate() {
         output.push_str(&format!(
             "{:8} | {:8} | {:13.4} | {:5}\n",
             step.cluster1, step.cluster2, step.dissimilarity, step.size
