@@ -134,8 +134,8 @@ pub fn map_to_string_size(veced_records: &[Vec<Vec<u8>>]) -> Vec<Vec<usize>> {
     //      each sub vector is a column
     veced_records
         .iter()
-        .map(|record| {
-            record
+        .map(|column| {
+            column
                 .iter()
                 .map(|bytes| {
                     let (text, _) = detect_and_decode(bytes);
@@ -148,8 +148,18 @@ pub fn map_to_string_size(veced_records: &[Vec<Vec<u8>>]) -> Vec<Vec<usize>> {
 
 // Tries to infer which column contains the rating.
 // That is, a column where all content is always either 0, 2 or 4.
-pub fn infer_rating_col_from_data(records: &mut ByteRecordsIter<File>, max_obs: Option<usize>) -> Option<usize> {
-    None
+pub fn infer_rating_col_from_data(records: &[Vec<Vec<u8>>]) -> Option<usize> {
+    records
+        .iter()
+        .enumerate()
+        .find(|(_, column)| {
+            column
+                .iter()
+                .all(|field| {
+                    bytes_is_rating(field)
+                })
+        })
+        .and_then(|(i, _)| Some(i))
 }
 
 fn bytes_is_rating(bytes: &[u8]) -> bool {
