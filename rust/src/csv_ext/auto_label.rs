@@ -1,9 +1,11 @@
 use std::fs::File;
 use std::io::{Seek, SeekFrom};
 
-use csv::{ByteRecordsIntoIter, ByteRecordsIter, Reader, ReaderBuilder, StringRecord};
+use csv::{ByteRecord, ByteRecordsIntoIter, ByteRecordsIter, Reader, ReaderBuilder, StringRecord};
 use csv_sniffer::Sniffer;
 use thiserror::Error;
+
+use crate::csv_ext::encoding::detect_and_decode;
 
 /*
 If there's a header
@@ -69,7 +71,28 @@ pub fn sniff_labels(path: String) -> Result<bool, Box<dyn std::error::Error>> {
 
 pub fn get_stats(records: &mut ByteRecordsIter<File>) -> Result<Vec<Vec<usize>>, Box<dyn std::error::Error>> {
     // compute statistics of messages
-    Ok(Vec::new())
+    // Vector of columns, that is, vector of vectors
+    //      each sub vector is a column
+    
+    // Helper function to avoid doing a if stats.empty while iterating on records
+    //          While also avoiding code dupplication !
+    fn get_record_stats(record: &mut ByteRecord, idx: usize, stats: &mut Vec<Vec<usize>>) {
+        record.iter().for_each(|bytes| {
+            let (text, _) = detect_and_decode(bytes);
+            stats[idx].push(text.len());
+        });
+    }
+
+    let mut record = records.next().unwrap()?;
+    let mut stats: Vec<Vec<usize>> = vec![vec![]; record.len()];
+    get_record_stats(&mut record, 0, &mut stats);
+
+    for (i, record) in records.enumerate() {
+        let mut record = record?;
+        get_record_stats(&mut record, i + 1, &mut stats); // i + 1 is eww I WANT enumerate(n) SO BADLY https://github.com/rust-itertools/itertools/issues/815
+    }
+    
+    Ok(stats)
 }
 
 pub fn infer_labels_from_stats(stats: Vec<Vec<usize>>) {
