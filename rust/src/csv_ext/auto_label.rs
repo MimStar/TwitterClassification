@@ -105,6 +105,50 @@ pub fn get_stats(records: &mut ByteRecordsIter<File>, max_obs: Option<usize>) ->
     Ok(stats)
 }
 
+// Tries to infer which column contains the rating.
+// That is, a column where all content is always either 0, 2 or 4.
+pub fn infer_rating_col_from_data(records: &mut ByteRecordsIter<File>, max_obs: Option<usize>) -> Option<usize> {
+    None
+}
+
+fn bytes_is_rating(bytes: &[u8]) -> bool {
+    let mut bytes_iter = bytes.iter();
+    
+    // Can't be empty
+    let first_byte = match bytes_iter.next() {
+        Some(b) => b,
+        None => return false,
+    };
+
+    // It can be a single byte not surrounded by quotes
+    let second_byte = match bytes_iter.next() {
+        Some(b) => b,
+        None => return byte_is_rating(*first_byte),
+    };
+    
+
+    // If there is more than one byte, there should be exactly 3 - [",x,"]
+    let third_byte = match bytes_iter.next() {
+        Some(b) => b,
+        None => return false,
+    };
+    
+    if let Some(_) = bytes_iter.next() {return false;}
+
+    // check the three bytes are of format [",x,"]
+    return *first_byte == b'"' && byte_is_rating(*second_byte) && *third_byte == b'"';
+}
+
+fn byte_is_rating(byte: u8) -> bool {
+    match byte {
+        b'0' | b'2' | b'3' => true,
+        _ => false,
+    }
+}
+
+// Tries to infer which column contains the tweets using the length of its content.
+// If all column shows evidences that it can't be containing valid tweets, it returns None
+//      - (that is, if some messages in them are too big to be tweets)
 pub fn infer_data_col_from_stats(stats: Vec<Vec<usize>>) -> Option<usize> {
     let mut best_col: Option<usize> = None;
     let mut best_score = usize::MAX; // Best score is the lowest - 
