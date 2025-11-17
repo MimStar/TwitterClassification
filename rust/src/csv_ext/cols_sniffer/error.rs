@@ -2,7 +2,7 @@ use thiserror::Error;
 
 
 #[derive(Error, Debug)]
-pub enum AutoLabelError {
+pub enum AutoColumnsError {
     #[error("Csv file opened at path `{0}` is empty.")]
     CSVEmpty(String),
     #[error("An error has risen while trying to manipulate csv files - `{0}`")]
@@ -16,5 +16,5 @@ pub enum AutoLabelError {
     #[error("No obvious field found for Data - Rating was - {rating_column:?}")]
     NoDataFound {rating_column: usize},
     #[error("No obvious field found")]
-    NoLabelFound,
+    NoColumnFound,
 }

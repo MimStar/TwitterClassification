@@ -1,13 +1,13 @@
 use csv::StringRecord;
 
-use crate::csv_ext::label_sniffer::{AutoColumns, LabelSniffer};
-use crate::csv_ext::label_sniffer::error::AutoLabelError;
-use crate::csv_ext::label_sniffer::config;
+use crate::csv_ext::cols_sniffer::{AutoColumns, ColsSniffer};
+use crate::csv_ext::cols_sniffer::error::AutoColumnsError;
+use crate::csv_ext::cols_sniffer::config;
 
-impl LabelSniffer {
-    pub fn sniff_labels_from_headers(
+impl ColsSniffer {
+    pub(super) fn sniff_columns_from_headers(
         headers: &StringRecord
-    ) -> Result<AutoColumns, AutoLabelError> {
+    ) -> Result<AutoColumns, AutoColumnsError> {
         let mut cols = AutoColumns {data_column: 0, rating_column: 0};
         let mut data_found = false;
         let mut rating_found = false;
@@ -38,13 +38,13 @@ impl LabelSniffer {
         }
     
         if data_found {
-            return Err(AutoLabelError::NoRatingFound { data_column: cols.data_column })
+            return Err(AutoColumnsError::NoRatingFound { data_column: cols.data_column })
         }
     
         if rating_found {
-            return Err(AutoLabelError::NoDataFound { rating_column: cols.rating_column })
+            return Err(AutoColumnsError::NoDataFound { rating_column: cols.rating_column })
         }
     
-        return Err(AutoLabelError::NoLabelFound);
+        return Err(AutoColumnsError::NoColumnFound);
     }
 }

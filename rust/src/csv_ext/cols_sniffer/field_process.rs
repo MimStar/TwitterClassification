@@ -1,6 +1,6 @@
-use crate::csv_ext::label_sniffer::LabelSniffer;
+use crate::csv_ext::cols_sniffer::ColsSniffer;
 
-impl LabelSniffer {
+impl ColsSniffer {
     pub(super) fn bytes_is_rating(bytes: &[u8]) -> bool {
         let mut bytes_iter = bytes.iter();
         

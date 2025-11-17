@@ -1,16 +1,16 @@
-use crate::csv_ext::label_sniffer::{AutoColumns, LabelSniffer, error::AutoLabelError};
+use crate::csv_ext::cols_sniffer::{AutoColumns, ColsSniffer, error::AutoColumnsError};
 
-impl LabelSniffer {
+impl ColsSniffer {
     pub(super) fn sniff_rating_with_data(
         veced_records: &mut [Vec<Vec<u8>>],
         data_column: usize
-    ) -> Result<AutoColumns, AutoLabelError> {
+    ) -> Result<AutoColumns, AutoColumnsError> {
         match Self::sniff_rating(&veced_records) {
             Some(rating_column) =>
                 Ok(AutoColumns {data_column, rating_column}),
             
             None =>
-                Err(AutoLabelError::NoRatingFound { data_column }),
+                Err(AutoColumnsError::NoRatingFound { data_column }),
         }
     }
 

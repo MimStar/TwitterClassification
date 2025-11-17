@@ -7,6 +7,8 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::cleandata::rule_filter::RuleFilter;
+use crate::csv_ext::cols_sniffer::error::AutoColumnsError;
+use crate::csv_ext::cols_sniffer::{AutoColumns, ColsSniffer};
 use crate::regex_ext::builder::RegexLogicalBuilder;
 //mod dirty_impl;
 
@@ -14,7 +16,7 @@ use crate::csv_ext::encoding;
 
 mod rule_filter;
 
-const TWEET_COL: usize = 1;
+const DATA_COL: usize = 1;
 const RATING_COL: usize = 0;
 
 #[derive(GodotClass)]
@@ -143,8 +145,22 @@ impl CleanData {
             RuleFilter::TRIM("punctuation".to_string(), punctuation)
         ];
 
+        // Warning here, rating and data cols might end up being the same
+        let auto_columns = ColsSniffer::sniff_columns(data_path).unwrap_or_else(|err| {
+            match err {
+                AutoColumnsError::NoDataFound { rating_column } => AutoColumns {data_column: DATA_COL, rating_column},
+                AutoColumnsError::NoRatingFound { data_column } => AutoColumns {data_column, rating_column: RATING_COL},
+                _ => AutoColumns { data_column: DATA_COL, rating_column: RATING_COL },
+            }
+        });
         // CALL WITH GENERATED FILTERS AND STATIC COLUMNS
-        self.clean_data_generic(data_path, "clean_data_temp.csv", TWEET_COL, RATING_COL, &filters)
+        self.clean_data_generic(
+            data_path, 
+            "clean_data_temp.csv", 
+            auto_columns.data_column, 
+            auto_columns.rating_column, 
+            &filters
+        )
     }
 
     #[signal]

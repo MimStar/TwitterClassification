@@ -5,7 +5,7 @@ use std::usize;
 use csv::ReaderBuilder;
 use csv_sniffer::Sniffer;
 
-use crate::csv_ext::label_sniffer::error::AutoLabelError;
+use crate::csv_ext::cols_sniffer::error::AutoColumnsError;
 use crate::csv_ext::transform::records_to_vec2d;
 
 /*
@@ -17,23 +17,23 @@ Otherwise, pick x random entries and
         A little tricky since we need to check for encoding, 
     For rating, look for decimals only, where all are >=0 & <=4.
 */
+pub mod error;
 mod field_process;
 mod sniff;
 mod sniff_data;
 mod sniff_rating;
 mod from_header;
-mod error;
 mod config;
 
-pub struct LabelSniffer;
+pub struct ColsSniffer;
 
 pub struct AutoColumns {
-    data_column: usize,
-    rating_column: usize,
+    pub data_column: usize,
+    pub rating_column: usize,
 }
 
-impl LabelSniffer {
-    pub fn sniff_labels(path: String) -> Result<AutoColumns, AutoLabelError> {
+impl ColsSniffer {
+    pub fn sniff_columns(path: &str) -> Result<AutoColumns, AutoColumnsError> {
         let mut sniffer = Sniffer::new();
         let mut file = File::open(path)?;
         let meta = sniffer.sniff_reader(&mut file)?;
@@ -55,11 +55,11 @@ impl LabelSniffer {
         let mut veced_records = records_to_vec2d(&mut rdr.byte_records(), Some(10))?;
     
         if has_header {
-            Self::sniff_labels_from_headers(&headers)
+            Self::sniff_columns_from_headers(&headers)
                 .or_else(|err|
-                    Self::sniff_labels_with_err(&mut veced_records, err))
+                    Self::sniff_columns_with_err(&mut veced_records, err))
         } else {
-            Self::sniff_labels_from_vec2d(&mut veced_records)
+            Self::sniff_columns_from_vec2d(&mut veced_records)
         }
     }
 }
