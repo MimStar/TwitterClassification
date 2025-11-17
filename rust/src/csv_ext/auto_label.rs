@@ -1,6 +1,8 @@
 use std::fs::File;
+use std::io::{Seek, SeekFrom};
 
-use csv::{ByteRecordsIntoIter, ByteRecordsIter, Reader};
+use csv::{ByteRecordsIntoIter, ByteRecordsIter, Reader, ReaderBuilder, StringRecord};
+use csv_sniffer::Sniffer;
 use thiserror::Error;
 
 /*
@@ -12,6 +14,10 @@ Otherwise, pick x random entries and
         A little tricky since we need to check for encoding, 
     For rating, look for decimals only, where all are >=0 & <=4.
 */
+
+static DATA_TARGET_HEADERS: &[&str] = &["tweet", "message", "content", "data", "tweet_content"];
+static RATING_TARGET_HEADERS: &[&str] = &["rating", "polarity", "grade", "positivity"];
+
 pub struct AutoColumns {
     data_column: usize,
     rating_column: usize,
@@ -32,6 +38,86 @@ pub enum AutoLabelError {
 }
 
 
+pub fn sniff_labels(path: String) -> Result<bool, Box<dyn std::error::Error>> {
+    let mut sniffer = Sniffer::new();
+    let mut file = File::open(path)?;
+    let meta = sniffer.sniff_reader(&mut file)?;
+
+    let has_header = meta.dialect.header.has_header_row;
+    let delimiter = meta.dialect.delimiter;
+    let flexible = meta.dialect.flexible;
+
+    file.seek(SeekFrom::Start(0))?;
+
+    let mut rdr = ReaderBuilder::new()
+        .has_headers(has_header)
+        .delimiter(delimiter)
+        .flexible(flexible)
+        .from_reader(file);
+
+    let headers = rdr.headers()?;
+
+    let column_index = if has_header {
+        sniff_labels_from_headers(headers)
+            .or_else(|err| sniff_labels_from_rows(&mut rdr.byte_records(), err))
+    } else {
+        sniff_labels_from_rows(&mut rdr.byte_records(), AutoLabelError::NoLabelFound)
+    };
+
+    Ok(true)
+}
+
+pub fn sniff_labels_from_rows(records: &mut ByteRecordsIter<File>, error: AutoLabelError) -> Result<AutoColumns, Box<dyn std::error::Error>> {
+    match error {
+        AutoLabelError::NoRatingFound { data_column } => todo!(),
+        AutoLabelError::NoDataFound { rating_column } => todo!(),
+        _ => todo!(),
+    }
+}
+
+pub fn sniff_labels_from_headers(headers: &StringRecord) -> Result<AutoColumns, AutoLabelError> {
+    let mut cols = AutoColumns {data_column: 0, rating_column: 0};
+    let mut data_found = false;
+    let mut rating_found = false;
+
+    headers
+        .iter()
+        .enumerate()
+        .for_each(|(i, header)| {
+            let lower_header = header.to_lowercase();
+            
+            if DATA_TARGET_HEADERS.contains(&lower_header.as_str()) {
+                cols.data_column = i;
+                if rating_found {
+                    return;
+                }
+                data_found = true;
+            } else if RATING_TARGET_HEADERS.contains(&lower_header.as_str()) {
+                cols.rating_column = i;
+                if data_found {
+                    return;
+                }
+                rating_found = true;
+            }
+        });
+    
+    if data_found && rating_found {
+        return Ok(cols);
+    }
+
+    if data_found {
+        return Err(AutoLabelError::NoRatingFound { data_column: cols.data_column })
+    }
+
+    if rating_found {
+        return Err(AutoLabelError::NoDataFound { rating_column: cols.rating_column })
+    }
+
+    return Err(AutoLabelError::NoLabelFound);
+}
+
+
+/*
 const HEADER_MAX_SIZE : usize = 255;
 // Check first row is only string
 //  if second row is not only strings - It's true !
@@ -84,10 +170,29 @@ pub fn detect_header(path: String) -> Result<bool, AutoLabelError> {
         });
     
     false
+}*/
+
+
+/* 
+// Returns
+// - Some(true) if it is a digit, that is, it is numeric
+// - None if it is '.', ',', '+' ... that is, it might be numeric, but we need more context
+// - Some(false) if it is not numeric for sure
+fn is_numeric_byte(byte: u8) -> Option<bool> {
+    match byte {
+        b'0'..=b'9'=> Some(true),
+        b'.' | b',' | b'+' | b'-' | b'e' | b'E' => None,
+        _ => Some(false)
+    }
 }
+
+fn is_numeric_bytes(bytes: &[u8]) -> bool {
+    bytes.iter().all(|byte|);
+}*/
 
 // Tries to figure out the columns numbers for data and rating fields in a database composed of tweets.
 // 
+/* 
 pub fn auto_label(rdr: &mut Reader<File>, premium_sub: bool) -> Result<AutoColumns, AutoLabelError> {
 
-}
+}*/
