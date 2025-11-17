@@ -31,7 +31,7 @@ impl ColsSniffer {
     
     pub(super) fn byte_is_rating(byte: u8) -> bool {
         match byte {
-            b'0' | b'2' | b'3' => true,
+            b'0' | b'2' | b'4' => true,
             _ => false,
         }
     }

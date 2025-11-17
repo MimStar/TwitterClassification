@@ -17,7 +17,7 @@ use crate::csv_ext::encoding;
 mod rule_filter;
 
 const DATA_COL: usize = 1;
-const RATING_COL: usize = 0;
+const RATING_COL: usize = 4;
 
 #[derive(GodotClass)]
 #[class(base=Node)]
