@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io::{Seek, SeekFrom};
+use std::usize;
 
 use csv::{ByteRecord, ByteRecordsIntoIter, ByteRecordsIter, Reader, ReaderBuilder, StringRecord};
 use csv_sniffer::Sniffer;
@@ -19,6 +20,7 @@ Otherwise, pick x random entries and
 
 static DATA_TARGET_HEADERS: &[&str] = &["tweet", "message", "content", "data", "tweet_content"];
 static RATING_TARGET_HEADERS: &[&str] = &["rating", "polarity", "grade", "positivity"];
+static TWEET_MAX_CHARS: usize = 280;
 
 pub struct AutoColumns {
     data_column: usize,
@@ -69,7 +71,7 @@ pub fn sniff_labels(path: String) -> Result<bool, Box<dyn std::error::Error>> {
     Ok(true)
 }
 
-pub fn get_stats(records: &mut ByteRecordsIter<File>) -> Result<Vec<Vec<usize>>, Box<dyn std::error::Error>> {
+pub fn get_stats(records: &mut ByteRecordsIter<File>, max_obs: Option<usize>) -> Result<Vec<Vec<usize>>, Box<dyn std::error::Error>> {
     // compute statistics of messages
     // Vector of columns, that is, vector of vectors
     //      each sub vector is a column
@@ -87,36 +89,51 @@ pub fn get_stats(records: &mut ByteRecordsIter<File>) -> Result<Vec<Vec<usize>>,
     let mut stats: Vec<Vec<usize>> = vec![vec![]; record.len()];
     get_record_stats(&mut record, 0, &mut stats);
 
+    let max_obs = max_obs.unwrap_or(usize::MAX);
+
     for (i, record) in records.enumerate() {
+        let real_idx = i+1; // i + 1 is eww I WANT enumerate(n) SO BADLY https://github.com/rust-itertools/itertools/issues/815
+        
+        if max_obs <= i {
+            break;
+        }
+
         let mut record = record?;
-        get_record_stats(&mut record, i + 1, &mut stats); // i + 1 is eww I WANT enumerate(n) SO BADLY https://github.com/rust-itertools/itertools/issues/815
+        get_record_stats(&mut record, real_idx, &mut stats);
     }
     
     Ok(stats)
 }
 
-pub fn infer_labels_from_stats(stats: Vec<Vec<usize>>) {
-    /*
-    let mut best_col = 0usize;
-    let mut best_score = usize::MAX;
+pub fn infer_data_col_from_stats(stats: Vec<Vec<usize>>) -> Option<usize> {
+    let mut best_col: Option<usize> = None;
+    let mut best_score = usize::MAX; // Best score is the lowest - 
 
-    for (i, lengths) in column_stats.iter().enumerate() {
-        if lengths.is_empty() {
-            continue;
-        }
-
-        let avg_len: f64 = lengths.iter().copied().map(|n| n as f64).sum::<f64>()
-            / (lengths.len() as f64);
-
-        let score = (TWEET_MAX_CHARS as isize - avg_len.round() as isize).abs() as usize;
+    for (i, lengths) in stats.iter().enumerate() {
+        let rows = lengths.len();
+        let score = lengths
+            .iter()
+            .copied()
+            .try_fold(0, |acc, length| {
+                // Early return an error if any cell is bigger than a tweet
+                if length > TWEET_MAX_CHARS {
+                    Err(())
+                } else {
+                    Ok(acc + length)
+                }
+            })
+            .and_then(|sum| Ok(sum/rows))
+            .and_then(|avg| Ok(TWEET_MAX_CHARS - avg))
+            .unwrap_or(usize::MAX); 
+            // Either the averrage, or usize::MAX if any thing was too big to be a tweet
 
         if score < best_score {
             best_score = score;
-            best_col = i;
+            best_col = Some(i);
         }
     }
 
-     */
+    best_col
 }
 
 pub fn sniff_labels_from_rows(records: &mut ByteRecordsIter<File>, error: AutoLabelError) -> Result<AutoColumns, Box<dyn std::error::Error>> {
