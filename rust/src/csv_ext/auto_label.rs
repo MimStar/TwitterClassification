@@ -63,9 +63,9 @@ pub fn sniff_labels(path: String) -> Result<bool, Box<dyn std::error::Error>> {
 
     let column_index = if has_header {
         sniff_labels_from_headers(headers)
-            .or_else(|err| sniff_labels_from_rows(&mut rdr.byte_records(), err))
+            .or_else(|err| sniff_labels_from_rows(&mut rdr.byte_records(), Some(err)))
     } else {
-        sniff_labels_from_rows(&mut rdr.byte_records(), AutoLabelError::NoLabelFound)
+        sniff_labels_from_rows(&mut rdr.byte_records(), None)
     };
 
     Ok(true)
@@ -200,7 +200,7 @@ fn byte_is_rating(byte: u8) -> bool {
 // Tries to infer which column contains the tweets using the length of its content.
 // If all column shows evidences that it can't be containing valid tweets, it returns None
 //      - (that is, if some messages in them are too big to be tweets)
-pub fn infer_data_col_from_stats(stats: Vec<Vec<usize>>) -> Option<usize> {
+pub fn infer_data_col_from_sizes(stats: Vec<Vec<usize>>) -> Option<usize> {
     let mut best_col: Option<usize> = None;
     let mut best_score = usize::MAX; // Best score is the lowest - 
 
@@ -231,13 +231,48 @@ pub fn infer_data_col_from_stats(stats: Vec<Vec<usize>>) -> Option<usize> {
     best_col
 }
 
-pub fn sniff_labels_from_rows(records: &mut ByteRecordsIter<File>, error: AutoLabelError) -> Result<AutoColumns, Box<dyn std::error::Error>> {
-    match error {
-        AutoLabelError::NoRatingFound { data_column } => todo!(),
-        AutoLabelError::NoDataFound { rating_column } => todo!(),
-        _ => todo!(),
+pub fn sniff_labels_from_rows(records: &mut ByteRecordsIter<File>, error: Option<AutoLabelError>) -> Result<AutoColumns, Box<dyn std::error::Error>> {
+    let mut veced_records = map_records_to_vec(records, Some(10))?;
+
+    return if let Some(err) = error {
+        match err {
+            AutoLabelError::NoRatingFound { data_column } => sniff_rating_with_data(&mut veced_records, data_column),
+            AutoLabelError::NoDataFound { rating_column } => sniff_data_with_rating(&mut veced_records, rating_column),
+            _ => todo!(),
+        }
+    } else {
+        
     }
 }
+
+pub fn sniff_labels_from_rows_pure(veced_records: &mut [Vec<Vec<u8>>], error: Option<AutoLabelError>) -> Result<AutoColumns, Box<dyn std::error::Error>> {
+    let data_column = infer_data_col_from_data(veced_records);
+
+    match data_column {
+        Some(col) => sniff_rating_with_data(veced_records, data_column),
+        None => todo!(),
+    }
+}
+
+fn infer_data_col_from_data(veced_records: &mut [Vec<Vec<u8>>]) -> Option<usize> {
+    let sizes = map_to_string_size(veced_records);
+    infer_data_col_from_sizes(sizes)
+}
+
+fn sniff_data_with_rating(veced_records: &mut [Vec<Vec<u8>>], rating_column: usize) -> Result<AutoColumns, Box<dyn std::error::Error>> {
+    match infer_data_col_from_data(veced_records) {
+        Some(data_column) => Ok(AutoColumns { data_column, rating_column }),
+        None => Err(Box::new(AutoLabelError::NoDataFound { rating_column })),
+    }
+}
+
+fn sniff_rating_with_data(veced_records: &mut [Vec<Vec<u8>>], data_column: usize) -> Result<AutoColumns, Box<dyn std::error::Error>> {
+    match infer_rating_col_from_data(&veced_records) {
+        Some(rating_column) => Ok(AutoColumns {data_column, rating_column}),
+        None => Err(Box::new(AutoLabelError::NoRatingFound { data_column })),
+    }
+}
+
 
 pub fn sniff_labels_from_headers(headers: &StringRecord) -> Result<AutoColumns, AutoLabelError> {
     let mut cols = AutoColumns {data_column: 0, rating_column: 0};
