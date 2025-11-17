@@ -1,2 +1,3 @@
 pub mod encoding;
-pub mod auto_label;
+pub mod label_sniffer;
+pub mod transform;
