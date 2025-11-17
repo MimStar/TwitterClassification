@@ -67,6 +67,35 @@ pub fn sniff_labels(path: String) -> Result<bool, Box<dyn std::error::Error>> {
     Ok(true)
 }
 
+pub fn get_stats(records: &mut ByteRecordsIter<File>) -> Result<Vec<Vec<usize>>, Box<dyn std::error::Error>> {
+    // compute statistics of messages
+    Ok(Vec::new())
+}
+
+pub fn infer_labels_from_stats(stats: Vec<Vec<usize>>) {
+    /*
+    let mut best_col = 0usize;
+    let mut best_score = usize::MAX;
+
+    for (i, lengths) in column_stats.iter().enumerate() {
+        if lengths.is_empty() {
+            continue;
+        }
+
+        let avg_len: f64 = lengths.iter().copied().map(|n| n as f64).sum::<f64>()
+            / (lengths.len() as f64);
+
+        let score = (TWEET_MAX_CHARS as isize - avg_len.round() as isize).abs() as usize;
+
+        if score < best_score {
+            best_score = score;
+            best_col = i;
+        }
+    }
+
+     */
+}
+
 pub fn sniff_labels_from_rows(records: &mut ByteRecordsIter<File>, error: AutoLabelError) -> Result<AutoColumns, Box<dyn std::error::Error>> {
     match error {
         AutoLabelError::NoRatingFound { data_column } => todo!(),
