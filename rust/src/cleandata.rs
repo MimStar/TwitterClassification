@@ -1,11 +1,21 @@
 use godot::prelude::*;
 use regex::Regex;
 use csv::{Writer, Reader};
-use core::hash;
+use std::borrow::Cow;
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+
+use crate::cleandata::rule_filter::RuleFilter;
+use crate::regex_ext::builder::RegexLogicalBuilder;
 //mod dirty_impl;
 
+use crate::csv_ext::encoding;
+
+mod rule_filter;
+
+const TWEET_COL: usize = 1;
+const RATING_COL: usize = 0;
 
 #[derive(GodotClass)]
 #[class(base=Node)]
@@ -26,139 +36,117 @@ impl CleanData {
     fn clean_data(&mut self, path: GString) -> GString {
         return match self.clean_data_body(&path.to_string()) {
             Ok(temp_path) => GString::from(temp_path),
-            Err(e) => GString::from(e),
+            Err(e) => {
+                self.signals().log_sent().emit(&GString::from(e));
+                return GString::from("");
+            },
         };
     }
 
-    fn clean_data_body(&mut self, data_path: &str) -> Result<String, &str> {
-        //let positives= vec!["😀", "😄", "😆", "😁", "🥰"];
-        //let negatives = vec!["😡", "😤", "😠", "🤬", "😈", "👿", "💀", "☠"];
+    fn clean_data_generic(&mut self, input_path: &str, output_path: &str, data_col: usize, rating_col: usize, filters: &Vec<RuleFilter>) -> Result<String, String> {
+        let mut filter_counters: HashMap<&RuleFilter, u32> = filters.iter().map(|filter| (filter, 0)).collect();
 
-        //let positives = vec!["a","b"];
-        //let negatives = vec!["c","d"];
+        let mut rdr = Reader::from_path(input_path).map_err(|e|
+            format!("Couldn't open {input_path} for read - {e}"))?;
+        let mut wtr = Writer::from_path(output_path).map_err(|e|
+            format!("Couldn't open {output_path} for write - {e}"))?;
 
-        let positives = vec!["(:\\))", "(:\\-\\))", "(:D)"];
-        let negatives = vec!["(:\\()", "(:\\-\\()", "(D:)"];
+        for result in rdr.byte_records() { // Byte records instead, then convert
 
-        let mut positive_re = "(".to_string(); 
-        for positive in positives.iter() {
-            positive_re += positive;
-            positive_re += "|";
-        }
+            let record = result.map_err(|e| format!("Couldn't read entry in input csv - {e}"))?;
+            let tweet = record.get(data_col).ok_or(
+                format!("Message column not found in record {record:?}"))?;
+            let (tweet, _) = encoding::detect_and_decode(tweet);
 
-        positive_re = rem_last(&positive_re).to_string();
-        positive_re += ")";
+            let rating = record.get(rating_col).ok_or(
+                format!("Rating column not found in record {record:?}"))?;
+            let (rating, _) = encoding::detect_and_decode(rating);
+            
 
-        let mut negative_re = "(".to_string();
+            let mut processed_entry = String::from(tweet);
+            let mut filters_iter = filters.iter();
 
-        for negative in negatives.iter() {
-            negative_re += negative;
-            negative_re += "|";
-        }
-
-        negative_re = rem_last(&negative_re).to_string();
-        negative_re += ")";
-
-        let unvalid_positive_first_re = ".*".to_owned() + &positive_re + "+.*" + &negative_re + "+.*";
-        let unvalid_negative_first_re = ".*".to_owned() + &negative_re + "+.*" + &positive_re + "+.*";
-        let unvalid_emojis_re = "(".to_owned() + &unvalid_positive_first_re + ")|(" + &unvalid_negative_first_re + ")";
-
-        let start = "(( )|^)";
-        let end = "( |$)";
-        let retweet = format!("{start}RT{end}");
-        let url = format!("((http:)|https:|(www.))[^ ]*{end}");
-        let user = format!("{start}@[^ ]*{end}");
-        let punctuation = "[!\\?\\\"\\.;,\\:\\*]";
-        let hashtag = format!("{start}#[^ ]*{end}");
-
-        //println!("{}", unvalid_emojis_re);
-
-        let mut urls_removed = 0;
-        let mut mixed_emotions = 0;
-        let mut retweets = 0;
-        let mut users_removed = 0;
-        let mut punctuation_trimed = 0;
-        let mut hashtag_trimed = 0;
-
-        if let Ok(mut rdr) = Reader::from_path(data_path)
-        && let Ok(mut wtr) = Writer::from_path("clean_data_temp.csv") {
-            for result in rdr.records() {
-                if let Ok(record) = result {
-                    if let Some(mut truc) = record.get(5)
-                    && let Some(mut rating) = record.get(0) {
-                        
-                        let re = Regex::new(&unvalid_emojis_re).unwrap();
-                        if re.is_match(truc) {
-                            //println!("mixed emotions : {:?}", truc);
-                            self.signals().log_sent().emit(&GString::from(format!("mixed emotions deleted : {:?}", truc)));
-                            mixed_emotions += 1;
-                            continue;
+            loop {
+                // Still filter left to apply
+                if let Some(filter) = filters_iter.next() {
+                    let mut logs = None;
+                    let filtered_result = filter.apply_with_logs(&mut processed_entry, &mut logs);
+                    if let Some(log_msg) = logs {
+                        println!("{log_msg}");
+                        self.signals().log_sent().emit(&GString::from(log_msg));
+                        if let Some(counter) = filter_counters.get_mut(filter) {
+                            *counter += 1; 
                         }
-
-                        let re = Regex::new(&retweet).unwrap();
-                        if re.is_match(truc) {
-                            //println!("retweet deleted : {:?}", truc);
-                            self.signals().log_sent().emit(&GString::from(format!("retweet deleted : {:?}", truc)));
-                            retweets += 1;
-                            continue;
-                        }
-
-                        let mut test = String::from(truc);
-
-                        let re = Regex::new(&url).unwrap();
-                        if re.is_match(&test) {
-                            test = re.replace_all(&test, "").to_string();
-                            self.signals().log_sent().emit(&GString::from(format!("url trimed : {:?}", test)));
-                            //println!("url trimed : {:?}", test);
-                            urls_removed += 1;
-                        }
-
-                        let re = Regex::new(&user).unwrap();
-                        if re.is_match(&test) {
-                            test = re.replace_all(&test, "").to_string();
-                            self.signals().log_sent().emit(&GString::from(format!("user trimed : {:?}", test)));
-                            //println!("user trimed : {:?}", test);
-                            users_removed += 1;
-                        }
-
-                        let re = Regex::new(&punctuation).unwrap();
-                        if re.is_match(&test) {
-                            test = re.replace_all(&test, "").to_string();
-                            self.signals().log_sent().emit(&GString::from(format!("punctuation trimed : {:?}", test)));
-                            //println!("punctuation trimed : {:?}", test);
-                            punctuation_trimed += 1;
-                        }
-
-                        let re = Regex::new(&hashtag).unwrap();
-                        if re.is_match(&test) {
-                            test = re.replace_all(&test, "").to_string();
-                            self.signals().log_sent().emit(&GString::from(format!("hashtag trimed : {:?}", test)));
-                            //println!("hashtag trimed : {:?}", test);
-                            hashtag_trimed += 1;
-                        }
-                        
-                        wtr.write_record(&[rating, &test]);
-
                     }
+
+                    match filtered_result {
+                        // The filters restricted the data up to the point there's no data anymore
+                        // We should break without recording it then.
+                        None => break,
+                        Some(passed) => {
+                            if let Cow::Owned(new_value) = passed {
+                                processed_entry = new_value;
+                            }
+                        }
+                    }
+                } else {   // No filter left, and data remaining
+                    wtr.write_record(&[&rating, &processed_entry]).map_err(|e| format!("Coudln't write the current record - {:?} : {e}", [&rating, &processed_entry]))?;
+                    break;
                 }
             }
-            //println!("mixed emotions : {mixed_emotions}\nurls trimed : {urls_removed}\nrts deleted: {retweets}\nusers trimed: {users_removed}\npunctuation trimed: {punctuation_trimed}\nhashtag trimed : {hashtag_trimed}");
-            return match fs::canonicalize(PathBuf::from("clean_data_temp.csv")) {
-                            Ok(path) => Ok(path.display().to_string()),
-                            Err(e) => Err("Couldn't parse output file"),
-                        };
         }
+        
+        return match fs::canonicalize(PathBuf::from(output_path)) {
+                        Ok(path) => Ok(path.display().to_string()),
+                        Err(e) => Err(format!("Couldn't parse output file - {e}")),
+                    };
+    }
 
-        return Err("Couldn't open input/output");
+    fn clean_data_body(&mut self, data_path: &str) -> Result<String, String> {
+        // AUTO FILTERS GENERATION
+        let positives = vec!["(:\\))", "(:\\-\\))", "(:D)"];    //
+        let negatives = vec!["(:\\()", "(:\\-\\()", "(D:)"];    // These should ideally be parametrized ?
+
+        let unvalid_emojis_re = RegexLogicalBuilder::new()
+            .contains(RegexLogicalBuilder::new()
+                .any_of(RegexLogicalBuilder::strings_to_builders(&positives))
+                .one_or_more()
+                .and(RegexLogicalBuilder::new()
+                    .any_of(RegexLogicalBuilder::strings_to_builders(&negatives))
+                    .one_or_more()))
+            .build().unwrap();
+
+        let retweet = RegexLogicalBuilder::from("RT").as_whole_word().build().unwrap();
+
+        let url_list = vec!["http:", "https:", "www."];
+        let url = RegexLogicalBuilder::new()
+            .any_of(RegexLogicalBuilder::strings_to_builders(&url_list))
+            .group()
+            .plus_non_space()
+            .any_times()
+            .as_word_end()
+            .build().unwrap();
+
+        let user = RegexLogicalBuilder::from("@")
+            .plus_non_space()
+            .any_times()
+            .as_whole_word()
+            .build().unwrap();
+
+        let punctuation = Regex::new("[!\\?\\\"\\.;,\\:\\*]").unwrap();
+
+        let filters = vec![
+            RuleFilter::DELETE("mixed emotio    ns".to_string() ,unvalid_emojis_re),
+            RuleFilter::DELETE("retweet".to_string(), retweet),
+            RuleFilter::TRIM("url".to_string(), url),
+            RuleFilter::TRIM("user".to_string(), user),
+            RuleFilter::TRIM("punctuation".to_string(), punctuation)
+        ];
+
+        // CALL WITH GENERATED FILTERS AND STATIC COLUMNS
+        self.clean_data_generic(data_path, "clean_data_temp.csv", TWEET_COL, RATING_COL, &filters)
     }
 
     #[signal]
     fn log_sent(message : GString);
 }
-
-fn rem_last(value: &str) -> &str {
-    let mut chars = value.chars();
-    chars.next_back();
-    chars.as_str()
-}
-// # !!!
