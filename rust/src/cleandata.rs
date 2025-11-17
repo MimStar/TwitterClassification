@@ -146,6 +146,7 @@ impl CleanData {
         ];
 
         // Warning here, rating and data cols might end up being the same
+         
         let auto_columns = ColsSniffer::sniff_columns(data_path).unwrap_or_else(|err| {
             match err {
                 AutoColumnsError::NoDataFound { rating_column } => AutoColumns {data_column: DATA_COL, rating_column},
@@ -153,6 +154,7 @@ impl CleanData {
                 _ => AutoColumns { data_column: DATA_COL, rating_column: RATING_COL },
             }
         });
+        
         // CALL WITH GENERATED FILTERS AND STATIC COLUMNS
         self.clean_data_generic(
             data_path, 

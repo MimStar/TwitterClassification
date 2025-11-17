@@ -27,6 +27,7 @@ mod config;
 
 pub struct ColsSniffer;
 
+#[derive(Debug)]
 pub struct AutoColumns {
     pub data_column: usize,
     pub rating_column: usize,

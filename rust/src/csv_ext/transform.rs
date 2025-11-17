@@ -16,26 +16,28 @@ pub fn records_to_vec2d(
     //          While also avoiding code dupplication !
     fn map_fields_in_vec2d(
         record: &mut ByteRecord
-        , idx: usize, vec: &mut Vec<Vec<Vec<u8>>>
+        , vec: &mut Vec<Vec<Vec<u8>>>
     ) {
-        record.iter().for_each(|bytes| {
+        record
+            .iter()
+            .enumerate()
+            .for_each(|(idx, bytes)| {
             vec[idx].push(bytes.to_vec());
         });
     }
 
     let mut record = records.next().unwrap()?;
     let mut vectored: Vec<Vec<Vec<u8>>> = vec![vec![]; record.len()];
-    map_fields_in_vec2d(&mut record, 0, &mut vectored);
+    map_fields_in_vec2d(&mut record, &mut vectored);
 
     let max_obs = max_obs.unwrap_or(usize::MAX);
 
     for (i, record) in records.enumerate() {
-        let real_idx = i+1; // i + 1 is eww I WANT enumerate(n) SO BADLY https://github.com/rust-itertools/itertools/issues/815
-        
-        if max_obs <= i {break}
+        // i + 1 is eww I WANT enumerate(n) SO BADLY https://github.com/rust-itertools/itertools/issues/815
+        if max_obs <= i + 1 {break}
 
         let mut record = record?;
-        map_fields_in_vec2d(&mut record, real_idx, &mut vectored);
+        map_fields_in_vec2d(&mut record, &mut vectored);
     }
 
     Ok(vectored)
