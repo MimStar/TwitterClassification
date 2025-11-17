@@ -3,10 +3,12 @@ extends Control
 const actions_scene = preload("res://scenes/actions_container.tscn")
 const clean_log_scene = preload("res://scenes/clean_log_container.tscn")
 const knn_scene = preload("res://scenes/knn_container.tscn")
+const cluster_scene = preload("res://scenes/cluster_container.tscn")
 
 var actions_container
 var logs_container
 var knn_container
+var cluster_container
 var clean_data
 var filedialog
 
@@ -23,6 +25,7 @@ func add_actions_container():
 	actions_container.get_node("FlowContainer/CleanCSVButton").button_up.connect(_on_clean_csv_button_button_up)
 	actions_container.get_node("FlowContainer/AnnotateButton").button_up.connect(_on_annotate_button_button_up)
 	actions_container.get_node("FlowContainer/KNNButton").button_up.connect(_on_knn_button_button_up)
+	actions_container.get_node("FlowContainer/ClusteringButton").button_up.connect(_on_cluster_button_button_up)
 	pass
 
 func add_logs_container():
@@ -36,6 +39,10 @@ func add_knn_container():
 	knn_container = knn_scene.instantiate()
 	add_child(knn_container)
 
+func add_cluster_container():
+	actions_container.queue_free()
+	cluster_container = cluster_scene.instantiate()
+	add_child(cluster_container)
 
 func _on_clean_csv_button_button_up():
 	filedialog = FileDialog.new()
@@ -59,6 +66,10 @@ func _on_annotate_button_button_up():
 	
 func _on_knn_button_button_up():
 	add_knn_container()
+	pass
+
+func _on_cluster_button_button_up():
+	add_cluster_container()
 	pass
 
 func _on_clean_csv_file_selected(path):

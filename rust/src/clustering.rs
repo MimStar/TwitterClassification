@@ -29,13 +29,13 @@ impl INode for Clustering {
 #[godot_api]
 impl Clustering {
     #[func]
-    fn hierarchical_execute(&mut self, path: GString, k: i64, method: GString) -> GString {
-        let res = run_pipeline(&path.to_string(), k as usize, &method.to_string());
+    fn hierarchical_execute(&mut self, path: GString, k: i64, method: i64) -> GString {
+        let res = run_pipeline(&path.to_string(), k as usize, method as usize);
         GString::from(res.unwrap_or_else(|e| format!("Error: {}", e)))
     }
 }
 
-fn run_pipeline(csv_path: &str, k: usize, method: &str) -> Result<String, Box<dyn Error>> {
+fn run_pipeline(csv_path: &str, k: usize, method: usize) -> Result<String, Box<dyn Error>> {
     // 1. Load annotated tweets
     let tweets = charger_tweets_annotes(csv_path)?;
 
@@ -50,10 +50,10 @@ fn run_pipeline(csv_path: &str, k: usize, method: &str) -> Result<String, Box<dy
     }
 
     // 3. Choose linkage method
-    let linkage_method = match method.to_lowercase().as_str() {
-        "complete" => Method::Complete,
-        "average" => Method::Average,
-        "ward" => Method::Ward,
+    let linkage_method = match method {
+        0 => Method::Average,
+        1 => Method::Complete,
+        2 => Method::Ward,
         _ => Method::Average, // default
     };
 
