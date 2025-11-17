@@ -33,6 +33,10 @@ pub enum AutoLabelError {
     CSVEmpty(String),
     #[error("An error has risen while trying to manipulate csv files - `{0}`")]
     CSVError(#[from] csv::Error),
+    #[error("An error has risen while trying to open file - `{0}`")]
+    IOError(#[from] std::io::Error),
+    #[error("An error has risen while trying to sniff base csv informations - `{0}`")]
+    SnifferError(#[from] csv_sniffer::error::SnifferError),
     #[error("No obvious field found for Rating - Data was - {data_column:?}")]
     NoRatingFound {data_column: usize},
     #[error("No obvious field found for Data - Rating was - {rating_column:?}")]
@@ -42,7 +46,7 @@ pub enum AutoLabelError {
 }
 
 
-pub fn sniff_labels(path: String) -> Result<bool, Box<dyn std::error::Error>> {
+pub fn sniff_labels(path: String) -> Result<AutoColumns, AutoLabelError> {
     let mut sniffer = Sniffer::new();
     let mut file = File::open(path)?;
     let meta = sniffer.sniff_reader(&mut file)?;
@@ -59,25 +63,26 @@ pub fn sniff_labels(path: String) -> Result<bool, Box<dyn std::error::Error>> {
         .flexible(flexible)
         .from_reader(file);
 
-    let headers = rdr.headers()?;
+    let headers = rdr.headers()?.clone();
 
-    let column_index = if has_header {
-        sniff_labels_from_headers(headers)
-            .or_else(|err| sniff_labels_from_rows(&mut rdr.byte_records(), Some(err)))
+    let mut veced_records = map_records_to_vec(&mut rdr.byte_records(), Some(10))?;
+
+    if has_header {
+        sniff_labels_from_headers(&headers)
+            .or_else(|err|
+                sniff_labels_with_err(&mut veced_records, err))
     } else {
-        sniff_labels_from_rows(&mut rdr.byte_records(), None)
-    };
-
-    Ok(true)
+        sniff_labels_from_veced(&mut veced_records)
+    }
 }
 
 
-pub fn map_records_to_vec(records: &mut ByteRecordsIter<File>, max_obs: Option<usize>) -> Result<Vec<Vec<Vec<u8>>>, Box<dyn std::error::Error>> {
+pub fn map_records_to_vec(records: &mut ByteRecordsIter<File>, max_obs: Option<usize>) -> Result<Vec<Vec<Vec<u8>>>, AutoLabelError> {
     // Maps the byte records as a 2 dimensionnal array to ease exploration by columns
     // Vector of columns, that is, vector of vectors
     //      each sub vector is a column
     
-    // Helper function to avoid doing a if stats.empty while iterating on records
+    // Helper function to avoid doing an if stats.empty while iterating on records
     //          While also avoiding code dupplication !
     fn map_record_in_vec(record: &mut ByteRecord, idx: usize, vec: &mut Vec<Vec<Vec<u8>>>) {
         record.iter().for_each(|bytes| {
@@ -109,7 +114,8 @@ pub fn map_records_to_vec(records: &mut ByteRecordsIter<File>, max_obs: Option<u
 the error is that vectored references bytes, which is owned by record, which is a local variable
 records.next() produces an owned variable, not a reference to a record.
 
-How can we get a reference instead ?
+How can we get a reference instead ? it seems impossible by using csv::Reader from what I read of the doc
+should implement my own buffer through csv-core, eh
 
 pub fn map_records_to_vec<'a>(records: &'a mut ByteRecordsIter<File>, max_obs: Option<usize>) -> Result<Vec<Vec<&'a [u8]>>, Box<dyn std::error::Error>> {
     fn map_record_in_vec<'a>(record: &'a mut ByteRecord, idx: usize, vec: &mut Vec<Vec<&'a [u8]>>) {
@@ -148,7 +154,7 @@ pub fn map_to_string_size(veced_records: &[Vec<Vec<u8>>]) -> Vec<Vec<usize>> {
 
 // Tries to infer which column contains the rating.
 // That is, a column where all content is always either 0, 2 or 4.
-pub fn infer_rating_col_from_data(records: &[Vec<Vec<u8>>]) -> Option<usize> {
+pub fn infer_rating_col_from_veced(records: &[Vec<Vec<u8>>]) -> Option<usize> {
     records
         .iter()
         .enumerate()
@@ -231,45 +237,50 @@ pub fn infer_data_col_from_sizes(stats: Vec<Vec<usize>>) -> Option<usize> {
     best_col
 }
 
-pub fn sniff_labels_from_rows(records: &mut ByteRecordsIter<File>, error: Option<AutoLabelError>) -> Result<AutoColumns, Box<dyn std::error::Error>> {
-    let mut veced_records = map_records_to_vec(records, Some(10))?;
-
-    return if let Some(err) = error {
-        match err {
-            AutoLabelError::NoRatingFound { data_column } => sniff_rating_with_data(&mut veced_records, data_column),
-            AutoLabelError::NoDataFound { rating_column } => sniff_data_with_rating(&mut veced_records, rating_column),
-            _ => todo!(),
-        }
-    } else {
-        
+pub fn sniff_labels_with_err(veced_records: &mut [Vec<Vec<u8>>], error: AutoLabelError) -> Result<AutoColumns, AutoLabelError> {
+    match error {
+        AutoLabelError::NoRatingFound { data_column } => sniff_rating_with_data(veced_records, data_column),
+        AutoLabelError::NoDataFound { rating_column } => sniff_data_with_rating(veced_records, rating_column),
+        _ => sniff_labels_from_veced(veced_records),
     }
 }
 
-pub fn sniff_labels_from_rows_pure(veced_records: &mut [Vec<Vec<u8>>], error: Option<AutoLabelError>) -> Result<AutoColumns, Box<dyn std::error::Error>> {
-    let data_column = infer_data_col_from_data(veced_records);
+pub fn sniff_labels_from_veced(veced_records: &mut [Vec<Vec<u8>>]) -> Result<AutoColumns, AutoLabelError> {
+    let data_column = infer_data_col_from_veced(veced_records);
+    let rating_column = infer_rating_col_from_veced(veced_records);
 
-    match data_column {
-        Some(col) => sniff_rating_with_data(veced_records, data_column),
-        None => todo!(),
+    if let Some(data_column) = data_column
+    && let Some(rating_column) = rating_column {
+        return Ok(AutoColumns { data_column, rating_column });
     }
+
+    if let Some(data_column) = data_column {
+        return Err(AutoLabelError::NoRatingFound { data_column });
+    }
+
+    if let Some(rating_column) = rating_column {
+        return Err(AutoLabelError::NoDataFound { rating_column });
+    }
+
+    return Err(AutoLabelError::NoLabelFound);
 }
 
-fn infer_data_col_from_data(veced_records: &mut [Vec<Vec<u8>>]) -> Option<usize> {
+fn infer_data_col_from_veced(veced_records: &mut [Vec<Vec<u8>>]) -> Option<usize> {
     let sizes = map_to_string_size(veced_records);
     infer_data_col_from_sizes(sizes)
 }
 
-fn sniff_data_with_rating(veced_records: &mut [Vec<Vec<u8>>], rating_column: usize) -> Result<AutoColumns, Box<dyn std::error::Error>> {
-    match infer_data_col_from_data(veced_records) {
+fn sniff_data_with_rating(veced_records: &mut [Vec<Vec<u8>>], rating_column: usize) -> Result<AutoColumns, AutoLabelError> {
+    match infer_data_col_from_veced(veced_records) {
         Some(data_column) => Ok(AutoColumns { data_column, rating_column }),
-        None => Err(Box::new(AutoLabelError::NoDataFound { rating_column })),
+        None => Err(AutoLabelError::NoDataFound { rating_column }),
     }
 }
 
-fn sniff_rating_with_data(veced_records: &mut [Vec<Vec<u8>>], data_column: usize) -> Result<AutoColumns, Box<dyn std::error::Error>> {
-    match infer_rating_col_from_data(&veced_records) {
+fn sniff_rating_with_data(veced_records: &mut [Vec<Vec<u8>>], data_column: usize) -> Result<AutoColumns, AutoLabelError> {
+    match infer_rating_col_from_veced(&veced_records) {
         Some(rating_column) => Ok(AutoColumns {data_column, rating_column}),
-        None => Err(Box::new(AutoLabelError::NoRatingFound { data_column })),
+        None => Err(AutoLabelError::NoRatingFound { data_column }),
     }
 }
 
