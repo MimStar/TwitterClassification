@@ -12,18 +12,6 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_oc8bi")
 
-[node name="DendrogramLabel" type="RichTextLabel" parent="."]
-layout_mode = 1
-anchors_preset = -1
-anchor_left = 0.122656
-anchor_top = 0.0986111
-anchor_right = 0.859375
-anchor_bottom = 0.497222
-grow_horizontal = 2
-grow_vertical = 2
-theme = ExtResource("1_jqap1")
-bbcode_enabled = true
-
 [node name="OptionsBar" type="Control" parent="."]
 layout_mode = 1
 anchor_top = 0.527778
@@ -112,29 +100,23 @@ disabled = true
 text = "Launch Clustering"
 metadata/_edit_use_anchors_ = true
 
-[node name="EvaluationWindow" type="Window" parent="."]
+[node name="DendrogramWindow" type="Window" parent="."]
 auto_translate_mode = 1
-title = "Evaluation Table"
+title = "Dendrogram"
 initial_position = 1
-size = Vector2i(640, 360)
+size = Vector2i(1280, 800)
 visible = false
 
-[node name="EvaluationTableLabel" type="RichTextLabel" parent="EvaluationWindow"]
+[node name="TextureRect" type="TextureRect" parent="DendrogramWindow"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-size_flags_horizontal = 6
-size_flags_vertical = 6
-theme = ExtResource("1_jqap1")
-bbcode_enabled = true
-scroll_active = false
-shortcut_keys_enabled = false
-horizontal_alignment = 1
-vertical_alignment = 1
+expand_mode = 2
 
 [connection signal="value_changed" from="OptionsBar/KClusters/SpinBox" to="." method="_on_spin_box_value_changed"]
 [connection signal="button_up" from="OptionsBar/ImportDatabase" to="." method="_on_import_database_button_up"]
 [connection signal="item_selected" from="OptionsBar/ModesButton" to="." method="_on_modes_button_item_selected"]
 [connection signal="button_up" from="LaunchButton" to="." method="_on_launch_button_button_up"]
+[connection signal="close_requested" from="DendrogramWindow" to="." method="_on_dendrogram_window_close_requested"]
