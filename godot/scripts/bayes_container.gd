@@ -2,7 +2,7 @@ extends Control
 
 var filedialog
 var database_path = ""
-var k = 3
+var tweet = ""
 var mode = 0
 
 func _on_import_database_button_up() -> void:
@@ -20,27 +20,38 @@ func _on_knn_csv_file_selected(path):
 	check_to_enable_or_disable_launch_button()
 	pass
 
-func _on_spin_box_value_changed(value: float) -> void:
-	k = int(value)
-	pass # Replace with function body.
-
 func _on_modes_button_item_selected(index: int) -> void:
 	mode = index
 	pass # Replace with function body.
+
+func _on_tweet_edit_text_changed() -> void:
+	tweet = $TweetEdit.text
+	check_to_enable_or_disable_launch_button()
+	pass # Replace with function body.
 	
 func check_to_enable_or_disable_launch_button():
-	if database_path.is_empty():
+	if tweet.is_empty():
 		$LaunchButton.disabled = true
-		$EvaluateButton.disabled = true
 	else:
 		$LaunchButton.disabled = false
+		
+	if database_path.is_empty():
+		$EvaluateButton.disabled = true
+	else:
 		$EvaluateButton.disabled = false
 	pass
 
 func _on_launch_button_button_up() -> void:
-	var clustering_node = Clustering.new()
-	var visualization = clustering_node.hierarchical_execute(database_path,k,mode)
-	$DendrogramLabel.text = visualization
+	var bayes_node = Bayes.new()
+	var classe = bayes_node.bayes_execute(database_path,tweet,mode)
+	$ResultLabel.text = classe
+	pass # Replace with function body.
+
+func _on_evaluate_button_button_up() -> void:
+	var bayes_node = Bayes.new()
+	var tableau_string = bayes_node.bayes_evaluate(database_path, mode)
+	$EvaluationWindow/EvaluationTableLabel.text = tableau_string
+	$EvaluationWindow.visible = true
 	pass # Replace with function body.
 
 func _on_evaluation_window_close_requested() -> void:

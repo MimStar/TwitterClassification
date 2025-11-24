@@ -1,18 +1,21 @@
-[gd_scene load_steps=3 format=3 uid="uid://d2o1y0vocwen"]
+[gd_scene load_steps=4 format=3 uid="uid://moqru7idc86h"]
 
-[ext_resource type="Theme" uid="uid://del8o8hyfbvg8" path="res://assets/main_theme.tres" id="1_jqap1"]
-[ext_resource type="Script" uid="uid://dyavrb3icdu5m" path="res://scripts/cluster_container.gd" id="1_oc8bi"]
+[ext_resource type="Script" uid="uid://dk77xrl5mn7i" path="res://scripts/bayes_container.gd" id="1_3ymhf"]
+[ext_resource type="Theme" uid="uid://del8o8hyfbvg8" path="res://assets/main_theme.tres" id="1_7kup4"]
 
-[node name="cluster_container" type="Control"]
+[sub_resource type="LabelSettings" id="LabelSettings_3ymhf"]
+font_size = 32
+
+[node name="bayes_container" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_oc8bi")
+script = ExtResource("1_3ymhf")
 
-[node name="DendrogramLabel" type="RichTextLabel" parent="."]
+[node name="TweetEdit" type="TextEdit" parent="."]
 layout_mode = 1
 anchors_preset = -1
 anchor_left = 0.122656
@@ -21,8 +24,21 @@ anchor_right = 0.859375
 anchor_bottom = 0.497222
 grow_horizontal = 2
 grow_vertical = 2
-theme = ExtResource("1_jqap1")
-bbcode_enabled = true
+placeholder_text = "Insert your tweet you want to classify"
+
+[node name="ResultLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.908333
+anchor_right = 1.0
+anchor_bottom = 0.983333
+offset_bottom = 3.05176e-05
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_7kup4")
+label_settings = SubResource("LabelSettings_3ymhf")
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="OptionsBar" type="Control" parent="."]
 layout_mode = 1
@@ -32,85 +48,69 @@ anchor_bottom = 0.722667
 offset_right = 0.32
 offset_bottom = -0.32
 
-[node name="KClusters" type="HBoxContainer" parent="OptionsBar"]
-layout_mode = 1
-anchors_preset = -1
-anchor_left = 0.230469
-anchor_top = 0.5
-anchor_right = 0.230469
-anchor_bottom = 0.5
-offset_left = -79.0
-offset_top = -15.5
-offset_right = 79.0
-offset_bottom = 15.5
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Label" type="Label" parent="OptionsBar/KClusters"]
-layout_mode = 2
-text = "K clusters"
-metadata/_edit_use_anchors_ = true
-metadata/_edit_lock_ = true
-
-[node name="SpinBox" type="SpinBox" parent="OptionsBar/KClusters"]
-layout_mode = 2
-min_value = 2.0
-max_value = 3.0
-value = 3.0
-rounded = true
-metadata/_edit_use_anchors_ = true
-metadata/_edit_lock_ = true
-
 [node name="ImportDatabase" type="Button" parent="OptionsBar"]
 layout_mode = 1
 anchors_preset = -1
-anchor_left = 0.5
+anchor_left = 0.345
 anchor_top = 0.5
-anchor_right = 0.5
+anchor_right = 0.345
 anchor_bottom = 0.5
-offset_left = -132.0
+offset_left = -132.6
 offset_top = -26.5
-offset_right = 132.0
+offset_right = 131.4
 offset_bottom = 26.5
 grow_horizontal = 2
 grow_vertical = 2
-theme = ExtResource("1_jqap1")
+theme = ExtResource("1_7kup4")
 text = "Import database"
 
 [node name="ModesButton" type="OptionButton" parent="OptionsBar"]
 layout_mode = 1
 anchors_preset = -1
-anchor_left = 0.775
+anchor_left = 0.682
 anchor_top = 0.5
-anchor_right = 0.775
+anchor_right = 0.682
 anchor_bottom = 0.5
-offset_left = -59.0
+offset_left = -58.9601
 offset_top = -15.5
-offset_right = 59.0
+offset_right = 59.0399
 offset_bottom = 15.5
 grow_horizontal = 2
 grow_vertical = 2
 selected = 0
 item_count = 2
-popup/item_0/text = "Average"
+popup/item_0/text = "Laplace"
 popup/item_0/id = 0
-popup/item_1/text = "Complete"
+popup/item_1/text = "AddAlpha"
 popup/item_1/id = 1
 
 [node name="LaunchButton" type="Button" parent="."]
 layout_mode = 1
 anchors_preset = -1
-anchor_left = 0.35625
+anchor_left = 0.208594
 anchor_top = 0.736167
-anchor_right = 0.633906
+anchor_right = 0.48625
 anchor_bottom = 0.858278
 offset_top = -0.0400391
 offset_right = -0.400085
 offset_bottom = 0.039978
-theme = ExtResource("1_jqap1")
+theme = ExtResource("1_7kup4")
 disabled = true
-text = "Launch Clustering"
-metadata/_edit_use_anchors_ = true
+text = "Launch Bayes"
+
+[node name="EvaluateButton" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.536719
+anchor_top = 0.736167
+anchor_right = 0.814375
+anchor_bottom = 0.858278
+offset_top = -0.0400391
+offset_right = -0.400085
+offset_bottom = 0.039978
+theme = ExtResource("1_7kup4")
+disabled = true
+text = "Evaluate Bayes"
 
 [node name="EvaluationWindow" type="Window" parent="."]
 auto_translate_mode = 1
@@ -127,14 +127,16 @@ grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 6
 size_flags_vertical = 6
-theme = ExtResource("1_jqap1")
+theme = ExtResource("1_7kup4")
 bbcode_enabled = true
 scroll_active = false
 shortcut_keys_enabled = false
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[connection signal="value_changed" from="OptionsBar/KClusters/SpinBox" to="." method="_on_spin_box_value_changed"]
+[connection signal="text_changed" from="TweetEdit" to="." method="_on_tweet_edit_text_changed"]
 [connection signal="button_up" from="OptionsBar/ImportDatabase" to="." method="_on_import_database_button_up"]
 [connection signal="item_selected" from="OptionsBar/ModesButton" to="." method="_on_modes_button_item_selected"]
 [connection signal="button_up" from="LaunchButton" to="." method="_on_launch_button_button_up"]
+[connection signal="button_up" from="EvaluateButton" to="." method="_on_evaluate_button_button_up"]
+[connection signal="close_requested" from="EvaluationWindow" to="." method="_on_evaluation_window_close_requested"]
