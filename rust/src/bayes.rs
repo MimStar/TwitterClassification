@@ -21,15 +21,20 @@ impl INode for Bayes {
 #[derive(Debug, Clone)]
 struct TweetEtiquete {
     contenu: String,
-    etiquette: i32, //4 = positif, 2 = neutre, 0 = négatif
+    etiquette: i32,
 }
 
-#[derive(Debug)]
-struct BayesModel {
-    log_prior: HashMap<i32, f64>,
-    log_prob: HashMap<i32, HashMap<String, f64>>,
-    vocab_taille: usize,
-    total_mots_par_classe: HashMap<i32, usize>
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Representation {
+    Presence,
+    Frequence,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum NgramMode {
+    Uni,
+    Bi,
+    UniBi,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -38,16 +43,39 @@ enum VoteType {
     AddAlpha,
 }
 
+#[derive(Debug)]
+struct BayesModel {
+    log_prior: HashMap<i32, f64>,
+    log_prob: HashMap<i32, HashMap<String, f64>>,
+    vocab_taille: usize,
+    total_mots_par_classe: HashMap<i32, usize>,
+    representation: Representation,
+    ngram_mode: NgramMode,
+}
+
 #[godot_api]
 impl Bayes{
     #[func]
-    fn bayes_execute(&mut self, path: GString, tweet: GString, type_vote: i64) -> GString {
+    fn bayes_execute(&mut self, path: GString, tweet: GString, type_vote: i64, type_representation: i64, ngram_type: i64) -> GString {
         let path_str = path.to_string();
         let tweet_str = tweet.to_string();
+        
         let vote_type = match type_vote as usize {
             1 => VoteType::AddAlpha,
             _ => VoteType::Laplace,
         };
+
+        let representation = match type_representation as usize {
+            1 => Representation::Frequence,
+            _ => Representation::Presence,
+        };
+
+        let ngram_mode = match ngram_type {
+            1 => NgramMode::Bi,
+            2 => NgramMode::UniBi,
+            _ => NgramMode::Uni,
+        };
+
         let data = match charger_donnees(&path_str){
             Ok(v) => v,
             Err(e) => {
@@ -55,7 +83,9 @@ impl Bayes{
                 return GString::from("ERREUR");
             }
         };
-        let model = BayesModel::new(&data, vote_type);
+
+        let model = BayesModel::new(&data, vote_type, representation, ngram_mode);
+        
         match model.classifier(&tweet_str) {
             Some(classe) => {
                 let res = match classe {
@@ -74,12 +104,25 @@ impl Bayes{
     }
 
     #[func]
-    fn bayes_evaluate(&mut self, path: GString, type_vote: i64) -> GString {
+    fn bayes_evaluate(&mut self, path: GString, type_vote: i64, type_representation: i64, ngram_type: i64) -> GString {
         let path_str = path.to_string();
+        
         let vote_type = match type_vote as usize {
             1 => VoteType::AddAlpha,
             _ => VoteType::Laplace,
         };
+
+        let representation = match type_representation as usize {
+            1 => Representation::Frequence,
+            _ => Representation::Presence,
+        };
+
+        let ngram_mode = match ngram_type {
+            1 => NgramMode::Bi,
+            2 => NgramMode::UniBi,
+            _ => NgramMode::Uni,
+        };
+
         let all = match charger_donnees(&path_str) {
             Ok(v) => v,
             Err(e) => {
@@ -87,14 +130,18 @@ impl Bayes{
                 return GString::from("ERREUR");
             }
         };
+
         let (train, test) = diviser_donnees_stratifiee(&all, 2.0 / 3.0);
         if train.is_empty() || test.is_empty() {
             self.signals().log_sent().emit(&GString::from("Base d'entraînement ou test vide"));
             return GString::from("ERREUR");
         }
-        let model = BayesModel::new(&train, vote_type);
+
+        let model = BayesModel::new(&train, vote_type, representation, ngram_mode);
+        
         let mut matrice_confusion = [[0usize; 3]; 3];
         let index_map : HashMap<i32, usize> = [(0,0), (2,1), (4,2)].iter().cloned().collect();
+        
         for tweet in &test {
             if let Some(pred) = model.classifier(&tweet.contenu) {
                 if let (Some(&idx_reel), Some(&idx_est)) = (index_map.get(&tweet.etiquette), index_map.get(&pred)){
@@ -103,7 +150,6 @@ impl Bayes{
             }
         }
         GString::from(format_matrice_confusion(&matrice_confusion))
-
     }
 
     #[signal]
@@ -111,7 +157,7 @@ impl Bayes{
 }
 
 impl BayesModel {
-    fn new(data: &[TweetEtiquete], vote: VoteType) -> Self {
+    fn new(data: &[TweetEtiquete], vote: VoteType, representation: Representation, ngram_mode: NgramMode) -> Self {
         let mut class_counts: HashMap<i32, usize> = HashMap::new();
         for t in data {
             *class_counts.entry(t.etiquette).or_insert(0) += 1;
@@ -121,11 +167,20 @@ impl BayesModel {
         let mut vocab: HashSet<String> = HashSet::new();
 
         for t in data {
-            let tokens = tokeniser_tweet(&t.contenu);
+            let tokens = tokeniser_tweet(&t.contenu, ngram_mode);
+            
+            let tokens_to_count: Vec<String> = match representation {
+                Representation::Presence => {
+                    let unique: HashSet<_> = tokens.into_iter().collect();
+                    unique.into_iter().collect()
+                },
+                Representation::Frequence => tokens
+            };
+
             let map = word_counts.entry(t.etiquette).or_insert_with(HashMap::new);
-            for w in &tokens {
+            for w in tokens_to_count {
                 *map.entry(w.clone()).or_insert(0) += 1;
-                vocab.insert(w.clone());
+                vocab.insert(w);
             }
         }
 
@@ -142,6 +197,7 @@ impl BayesModel {
 
         let mut log_prob: HashMap<i32, HashMap<String, f64>> = HashMap::new();
         let vocab_taille = vocab.len() as f64;
+        
         for (&cls, map) in &word_counts {
             let class_total: usize = map.values().sum();
             let denom = class_total as f64 + alpha * vocab_taille;
@@ -150,33 +206,46 @@ impl BayesModel {
                 let p = (cnt as f64 + alpha) / denom;
                 ll_map.insert(w.clone(), p.ln());
             }
-            log_prob.insert(cls,ll_map);
+            log_prob.insert(cls, ll_map);
         }
 
         let mut total_mots_par_classe = HashMap::new();
         for (&cls, map) in &word_counts {
             let total: usize = map.values().sum();
-            total_mots_par_classe.insert(cls,total);
+            total_mots_par_classe.insert(cls, total);
         }
+
         Self {
             log_prior,
             log_prob,
             vocab_taille: vocab.len(),
-            total_mots_par_classe
+            total_mots_par_classe,
+            representation,
+            ngram_mode,
         }
     }
 
     fn classifier(&self, tweet: &str) -> Option<i32> {
-        let tokens = tokeniser_tweet(tweet);
+        let tokens = tokeniser_tweet(tweet, self.ngram_mode);
+        
+        let tokens_to_score: Vec<String> = match self.representation {
+            Representation::Presence => {
+                let unique: HashSet<_> = tokens.into_iter().collect();
+                unique.into_iter().collect()
+            },
+            Representation::Frequence => tokens
+        };
+
         let mut scores: HashMap<i32, f64> = HashMap::new();
         for (&cls, &prior) in &self.log_prior {
             let mut score = prior;
             if let Some(ll_map) = self.log_prob.get(&cls) {
-                for w in &tokens {
+                for w in &tokens_to_score {
                     let log_lk = ll_map.get(w).cloned().unwrap_or_else(|| {
                         let class_total = *self.total_mots_par_classe.get(&cls).unwrap_or(&0);
-                        let denom = class_total as f64 + 1.0 * self.vocab_taille as f64;
-                        (1.0 / denom).ln()
+                        let alpha_lissage = 1.0; 
+                        let denom = class_total as f64 + alpha_lissage * self.vocab_taille as f64;
+                        (alpha_lissage / denom).ln()
                     });
                     score += log_lk;
                 }
@@ -210,8 +279,32 @@ fn charger_donnees(chemin: &str) -> Result<Vec<TweetEtiquete>, Box<dyn std::erro
     Ok(donnees)
 }
 
-fn tokeniser_tweet(tweet: &str) -> HashSet<String> {
-    tweet.split_whitespace().map(|w| w.to_lowercase()).collect()
+fn tokeniser_tweet(tweet: &str, mode: NgramMode) -> Vec<String> {
+    let unigrams: Vec<String> = tweet.split_whitespace()
+        .map(|w| w.to_lowercase())
+        .filter(|w| w.chars().count() >= 4)
+        .collect();
+
+    let mut tokens = Vec::new();
+
+    match mode {
+        NgramMode::Uni => {
+            tokens = unigrams;
+        },
+        NgramMode::Bi => {
+            for window in unigrams.windows(2) {
+                tokens.push(format!("{} {}", window[0], window[1]));
+            }
+        },
+        NgramMode::UniBi => {
+            tokens.extend(unigrams.clone());
+            for window in unigrams.windows(2) {
+                tokens.push(format!("{} {}", window[0], window[1]));
+            }
+        }
+    }
+    
+    tokens
 }
 
 fn diviser_donnees_stratifiee(donnees: &[TweetEtiquete], ratio_train: f64) -> (Vec<TweetEtiquete>, Vec<TweetEtiquete>){
@@ -234,7 +327,6 @@ fn diviser_donnees_stratifiee(donnees: &[TweetEtiquete], ratio_train: f64) -> (V
 }
 
 fn format_matrice_confusion(matrice: &[[usize; 3]]) -> String {
-    // Indices : 0 = négatif, 1 = neutre, 2 = positif
     let n_pos_reel = matrice[2][0] + matrice[2][1] + matrice[2][2];
     let n_neg_reel = matrice[0][0] + matrice[0][1] + matrice[0][2];
     let n_neu_reel = matrice[1][0] + matrice[1][1] + matrice[1][2];
@@ -250,25 +342,9 @@ fn format_matrice_confusion(matrice: &[[usize; 3]]) -> String {
         [cell]Neutre[/cell][cell]{}[/cell][cell]{}[/cell][cell]{}[/cell][cell]{}[/cell]\n\
         [cell]Total estimé[/cell][cell]{}[/cell][cell]{}[/cell][cell]{}[/cell][cell]{}[/cell]\n\
         [/table]",
-        // Ligne Positive réelle
-        matrice[2][2], // TP_pos
-        matrice[2][0], // FN_pos → négatif
-        matrice[2][1], // FN_pos → neutre
-        n_pos_reel,
-        // Ligne Négative réelle
-        matrice[0][2], // FP_neg → positif
-        matrice[0][0], // TP_neg
-        matrice[0][1], // FN_neg → neutre
-        n_neg_reel,
-        // Ligne Neutre réelle
-        matrice[1][2], // FP_neu → positif
-        matrice[1][0], // FP_neu → négatif
-        matrice[1][1], // TP_neu
-        n_neu_reel,
-        // Totaux estimés
-        n_pos_estime,
-        n_neg_estime,
-        n_neu_estime,
-        total
+        matrice[2][2], matrice[2][0], matrice[2][1], n_pos_reel,
+        matrice[0][2], matrice[0][0], matrice[0][1], n_neg_reel,
+        matrice[1][2], matrice[1][0], matrice[1][1], n_neu_reel,
+        n_pos_estime, n_neg_estime, n_neu_estime, total
     )
 }

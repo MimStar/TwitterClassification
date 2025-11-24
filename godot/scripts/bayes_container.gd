@@ -4,6 +4,8 @@ var filedialog
 var database_path = ""
 var tweet = ""
 var mode = 0
+var representation = 1
+var ngram_mode = 2
 
 func _on_import_database_button_up() -> void:
 	filedialog = FileDialog.new()
@@ -22,6 +24,15 @@ func _on_knn_csv_file_selected(path):
 
 func _on_modes_button_item_selected(index: int) -> void:
 	mode = index
+	pass # Replace with function body.
+
+func _on_representations_button_item_selected(index: int) -> void:
+	representation = index
+	pass # Replace with function body.
+
+
+func _on_n_gram_modes_button_item_selected(index: int) -> void:
+	ngram_mode = index
 	pass # Replace with function body.
 
 func _on_tweet_edit_text_changed() -> void:
@@ -43,13 +54,13 @@ func check_to_enable_or_disable_launch_button():
 
 func _on_launch_button_button_up() -> void:
 	var bayes_node = Bayes.new()
-	var classe = bayes_node.bayes_execute(database_path,tweet,mode)
+	var classe = bayes_node.bayes_execute(database_path,tweet,mode,representation,ngram_mode)
 	$ResultLabel.text = classe
 	pass # Replace with function body.
 
 func _on_evaluate_button_button_up() -> void:
 	var bayes_node = Bayes.new()
-	var tableau_string = bayes_node.bayes_evaluate(database_path, mode)
+	var tableau_string = bayes_node.bayes_evaluate(database_path, mode,representation,ngram_mode)
 	$EvaluationWindow/EvaluationTableLabel.text = tableau_string
 	$EvaluationWindow.visible = true
 	pass # Replace with function body.
