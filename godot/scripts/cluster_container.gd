@@ -31,25 +31,23 @@ func _on_modes_button_item_selected(index: int) -> void:
 func check_to_enable_or_disable_launch_button():
 	if database_path.is_empty():
 		$LaunchButton.disabled = true
-		$EvaluateButton.disabled = true
 	else:
 		$LaunchButton.disabled = false
-		$EvaluateButton.disabled = false
 	pass
 
 func _on_launch_button_button_up() -> void:
 	var clustering_node = Clustering.new()
 	var visualization = clustering_node.hierarchical_execute(database_path,k,mode)
-	$DendrogramLabel.text = visualization
+	var image = Image.new()
+	var err = image.load_svg_from_string(visualization)
+	if err == OK:
+		var texture = ImageTexture.create_from_image(image)
+		$DendrogramWindow/TextureRect.texture = texture
+		$DendrogramWindow.visible = true
+	else:
+		print("Erreur lors du chargement du SVG")
 	pass # Replace with function body.
 
-func _on_evaluate_button_button_up() -> void:
-	var knn_node = Knn.new()
-	var tableau_string = knn_node.knn_evaluate(database_path,k,mode)
-	$EvaluationWindow/EvaluationTableLabel.text = tableau_string
-	$EvaluationWindow.visible = true
-	pass # Replace with function body.
-
-func _on_evaluation_window_close_requested() -> void:
-	$EvaluationWindow.visible = false
+func _on_dendrogram_window_close_requested() -> void:
+	$DendrogramWindow.visible = false
 	pass # Replace with function body.
