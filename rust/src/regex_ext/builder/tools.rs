@@ -10,7 +10,7 @@ impl RegexLogicalBuilder {
         Self {proc_result : p + "]"}
     }
 
-    pub fn strings_to_builders(strings: &Vec<&str>) -> Vec<RegexLogicalBuilder> {
+    pub fn strings_to_builders(strings: &[&str]) -> Vec<RegexLogicalBuilder> {
         strings.into_iter().map(|s| RegexLogicalBuilder::from(*s)).collect()
     }
 }
