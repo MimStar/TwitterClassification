@@ -14,12 +14,14 @@ use crate::cleandata::rule_filter::RuleFilter;
 
 use crate::csv_ext::encoding;
 
+const BLANK_RATING: &str = "2";
+
 impl CleanData {
     pub(super) fn clean_data_generic(
         &mut self, input_path: &str,
         output_path: &str,
         data_col: usize,
-        rating_col: usize,
+        rating_col: Option<usize>,
         filters: &Vec<RuleFilter>
     ) -> Result<String, CleanDataError>
     {
@@ -45,11 +47,16 @@ impl CleanData {
             let (tweet, _) = encoding::detect_and_decode(tweet);
 
 
-            let rating = record
-                .get(rating_col)
-                .ok_or(CleanDataError::MissingRating(record.clone()))?;
+            let rating = match rating_col {
+                Some(col) => {
+                    let rating = record
+                        .get(col)
+                        .ok_or(CleanDataError::MissingRating(record.clone()))?;
 
-            let (rating, _) = encoding::detect_and_decode(rating);
+                    encoding::detect_and_decode(rating).0
+                },
+                None => String::from(String::from(BLANK_RATING)),
+            };
             
 
             let mut processed_entry = String::from(tweet);

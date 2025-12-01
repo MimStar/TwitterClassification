@@ -4,13 +4,11 @@ use crate::cleandata::CleanData;
 use crate::cleandata::error::CleanDataError;
 use crate::cleandata::rule_filter::RuleFilter;
 
-use crate::csv_ext::cols_sniffer::{AutoColumns, ColsSniffer};
-use crate::csv_ext::cols_sniffer::error::AutoColumnsError;
+use crate::csv_ext::cols_sniffer::{self, ColsSniffer};
 
 mod auto_rules;
 
 const DATA_COL: usize = 1;
-const RATING_COL: usize = 4;
 
 impl CleanData {
     pub(super) fn clean_data_body(&mut self, data_path: &str) -> Result<String, CleanDataError> {
@@ -33,13 +31,8 @@ impl CleanData {
         ];
 
         // Warning here, rating and data cols might end up being the same
-        let auto_columns = ColsSniffer::sniff_columns(data_path).unwrap_or_else(|err| {
-            match err {
-                AutoColumnsError::NoDataFound { rating_column } => AutoColumns {data_column: DATA_COL, rating_column},
-                AutoColumnsError::NoRatingFound { data_column } => AutoColumns {data_column, rating_column: RATING_COL},
-                _ => AutoColumns { data_column: DATA_COL, rating_column: RATING_COL },
-            }
-        });
+        let auto_columns = ColsSniffer::sniff_columns(data_path);
+        let auto_columns = cols_sniffer::error::to_auto_columns(&auto_columns, DATA_COL);
         
         // CALL WITH GENERATED FILTERS AND STATIC COLUMNS
         self.clean_data_generic(
