@@ -6,6 +6,7 @@ use csv::{Reader, Writer};
 
 use godot::builtin::GString;
 use godot::obj::WithUserSignals;
+use itertools::Itertools;
 
 use crate::cleandata::CleanData;
 use crate::cleandata::error::CleanDataError;
@@ -30,6 +31,7 @@ impl CleanData {
 
         let mut rdr = Reader::from_path(input_path)?;
         let mut wtr = Writer::from_path(output_path)?;
+        let mut saved_records: Vec<[String; 2]> = vec![];
 
         // Using byte records since it is not necessarily utf-8
         // We want to be flexible over the encoding format of the csv entries, so we'll decode them manually.
@@ -82,10 +84,26 @@ impl CleanData {
                         }
                     }
                 } else {   // No filter left to apply, and some data is remaining
-                    wtr.write_record(&[&rating, &processed_entry])?;
+                    saved_records.push([rating, processed_entry]);
                     break;
                 }
             }
+        }
+
+        let prev_size = saved_records.len();
+        let uniqued_records = saved_records
+            .iter()
+            .unique_by(|entry| &entry[1])
+            .collect::<Vec<_>>();
+
+        self.signals()
+            .log_sent()
+            .emit(&GString::from(
+                format!("Removed {} dupplicates.", prev_size - uniqued_records.len())
+            ));
+
+        for record in uniqued_records {
+            wtr.write_record(record)?;
         }
 
         let path = fs::canonicalize(PathBuf::from(output_path))?;
