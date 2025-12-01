@@ -32,12 +32,12 @@ impl RuleFilter {
             },
             RuleFilter::REPLACE(log_msg, re, rep) => {
                 let replaced = re.replace_all(entry, rep);
-                if let Cow::Owned(ref passed) = replaced {*logs = Some(log_msg.to_string() + " replaced : " + passed)};
+                if let Cow::Owned(ref passed) = replaced {*logs = Some(log_msg.to_string() + " replaced - remains : " + passed)};
                 return Some(replaced);
             },
             RuleFilter::TRIM(log_msg, re) => {
                 let replaced = re.replace_all(entry, "");
-                if let Cow::Owned(ref passed) = replaced {*logs = Some(log_msg.to_string() + " trimed : " + passed)};
+                if let Cow::Owned(ref passed) = replaced {*logs = Some(log_msg.to_string() + " trimed - remains : " + passed)};
                 return Some(replaced);
             }
         }
