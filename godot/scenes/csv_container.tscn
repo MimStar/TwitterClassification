@@ -5,12 +5,13 @@
 
 [node name="csv_container" type="Control"]
 layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
+anchor_right = 0.842
 anchor_bottom = 1.0
+offset_right = 0.239868
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_tt46s")
+metadata/_edit_use_anchors_ = true
 
 [node name="table" type="Control" parent="."]
 layout_mode = 1
@@ -42,3 +43,5 @@ grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("2_l1hnk")
 text = "Sauvegarder"
+
+[connection signal="button_up" from="buttons/SaveButton" to="." method="_on_save_button_button_up"]

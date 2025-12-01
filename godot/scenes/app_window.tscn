@@ -1,0 +1,70 @@
+[gd_scene load_steps=2 format=3 uid="uid://cbk6wl710j118"]
+
+[ext_resource type="Script" uid="uid://b3egidurnkjlj" path="res://scripts/app_window.gd" id="1_kmlmw"]
+
+[node name="AppWindow" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_kmlmw")
+
+[node name="Background" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ButtonList" type="VBoxContainer" parent="."]
+layout_mode = 2
+anchor_right = 0.158
+anchor_bottom = 0.146
+offset_right = -0.240005
+offset_bottom = -0.12001
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ImportButton" type="Button" parent="ButtonList"]
+layout_mode = 2
+text = "Open database"
+
+[node name="EditorButton" type="Button" parent="ButtonList"]
+layout_mode = 2
+disabled = true
+text = "Annotate manually"
+
+[node name="AlgoButton" type="Button" parent="ButtonList"]
+layout_mode = 2
+disabled = true
+text = "Annotate automatically"
+
+[node name="MainWindow" type="Control" parent="."]
+layout_mode = 1
+anchor_left = 0.157813
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+metadata/_edit_use_anchors_ = true
+
+[node name="LogLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.802778
+anchor_right = 0.158
+anchor_bottom = 0.987444
+offset_right = -0.240005
+offset_bottom = 0.039999
+horizontal_alignment = 1
+vertical_alignment = 2
+autowrap_mode = 3
+clip_text = true
+metadata/_edit_use_anchors_ = true
+
+[connection signal="button_up" from="ButtonList/ImportButton" to="." method="_on_import_button_button_up"]
+[connection signal="button_up" from="ButtonList/EditorButton" to="." method="_on_editor_button_button_up"]
+[connection signal="button_up" from="ButtonList/AlgoButton" to="." method="_on_algo_button_button_up"]

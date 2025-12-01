@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="TwitterClassification"
-run/main_scene="uid://bo3w24i8ms8yd"
+run/main_scene="uid://cbk6wl710j118"
 config/features=PackedStringArray("4.4", "Forward Plus")
 config/icon="res://icon.svg"
 

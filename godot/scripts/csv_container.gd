@@ -5,6 +5,9 @@ const main_theme = preload("res://assets/main_theme.tres")
 var csv_path = ""
 var data = []
 
+signal csv_success
+signal csv_error
+
 func _ready():
 	#Récupérer les données du CSV clean
 	load_csv(csv_path)
@@ -48,3 +51,32 @@ func load_csv(file_path: String) -> void:
 func _on_line_edit_text_changed(new_text: String, line_edit : LineEdit):
 	data[line_edit.get_meta("row")][line_edit.get_meta("column")] = new_text
 	pass
+
+func _on_save_button_button_up() -> void:
+	if csv_path == "":
+		csv_error.emit()
+		return
+	
+	save_csv(csv_path)
+
+func save_csv(file_path: String) -> void:
+	var file = FileAccess.open(file_path, FileAccess.WRITE)
+	
+	if file:
+		for row in data:
+			# Convert the row array to a CSV line
+			var csv_line = []
+			for cell in row:
+				# Escape the cell if it contains commas, quotes, or newlines
+				var escaped_cell = str(cell)
+				if escaped_cell.find(",") != -1 or escaped_cell.find("\"") != -1 or escaped_cell.find("\n") != -1:
+					escaped_cell = "\"" + escaped_cell.replace("\"", "\"\"") + "\""
+				csv_line.append(escaped_cell)
+			
+			# Write the CSV line
+			file.store_csv_line(csv_line)
+		
+		file.close()
+		csv_success.emit()
+	else:
+		csv_error.emit()

@@ -2,14 +2,14 @@
 
 importer="csv_translation"
 type="Translation"
-uid="uid://ddqsfr8i2v3ep"
+uid="uid://bkd5o0dkaxylh"
 
 [deps]
 
-files=["res://clean_data_temp.Reading my kindle2  Love it Lee childs is good read.translation"]
+files=["res://clean_data_temp.Still not emotionally prepared for #AvengersEndgame tomorrow <U+0001F616>.translation"]
 
 source_file="res://clean_data_temp.csv"
-dest_files=["res://clean_data_temp.Reading my kindle2  Love it Lee childs is good read.translation"]
+dest_files=["res://clean_data_temp.Still not emotionally prepared for #AvengersEndgame tomorrow <U+0001F616>.translation"]
 
 [params]
 

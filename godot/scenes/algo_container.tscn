@@ -1,0 +1,333 @@
+[gd_scene load_steps=3 format=3 uid="uid://ccm3322ydum81"]
+
+[ext_resource type="Theme" uid="uid://del8o8hyfbvg8" path="res://assets/main_theme.tres" id="1_we0wx"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_we0wx"]
+font_size = 32
+
+[node name="algo_container" type="Control"]
+layout_mode = 3
+anchor_right = 0.842
+anchor_bottom = 1.0
+offset_right = 0.239868
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TweetEdit" type="TextEdit" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.122449
+anchor_top = 0.0986111
+anchor_right = 0.858998
+anchor_bottom = 0.3125
+grow_horizontal = 2
+grow_vertical = 2
+placeholder_text = "Insert your tweet you want to classify"
+metadata/_edit_use_anchors_ = true
+
+[node name="ClassifyButton" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.208594
+anchor_top = 0.736167
+anchor_right = 0.48625
+anchor_bottom = 0.858278
+offset_top = -0.0400391
+offset_right = -0.400085
+offset_bottom = 0.039978
+theme = ExtResource("1_we0wx")
+disabled = true
+text = "Classify"
+
+[node name="EvaluateButton" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.536719
+anchor_top = 0.736167
+anchor_right = 0.814375
+anchor_bottom = 0.858278
+offset_top = -0.0400391
+offset_right = -0.400085
+offset_bottom = 0.039978
+theme = ExtResource("1_we0wx")
+text = "Evaluate"
+
+[node name="AlgoButton" type="OptionButton" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.472171
+anchor_top = 0.377083
+anchor_right = 0.472171
+anchor_bottom = 0.377083
+offset_left = -59.0
+offset_top = -15.5
+offset_right = 59.0
+offset_bottom = 15.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 32
+selected = 0
+item_count = 4
+popup/item_0/text = "Naive"
+popup/item_0/id = 0
+popup/item_1/text = "KNN"
+popup/item_1/id = 1
+popup/item_2/text = "Clustering"
+popup/item_2/id = 2
+popup/item_3/text = "Bayes"
+popup/item_3/id = 3
+metadata/_edit_use_anchors_ = true
+
+[node name="KNNOptionsBar" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchor_top = 0.480556
+anchor_right = 0.99975
+anchor_bottom = 0.675445
+offset_right = 0.32
+offset_bottom = -0.32
+metadata/_edit_use_anchors_ = true
+
+[node name="KVoisins" type="HBoxContainer" parent="KNNOptionsBar"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.230469
+anchor_top = 0.5
+anchor_right = 0.230469
+anchor_bottom = 0.5
+offset_left = -79.0
+offset_top = -15.5
+offset_right = 79.0
+offset_bottom = 15.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label" type="Label" parent="KNNOptionsBar/KVoisins"]
+layout_mode = 2
+text = "K voisins"
+metadata/_edit_use_anchors_ = true
+metadata/_edit_lock_ = true
+
+[node name="SpinBox" type="SpinBox" parent="KNNOptionsBar/KVoisins"]
+layout_mode = 2
+min_value = 3.0
+value = 5.0
+rounded = true
+metadata/_edit_use_anchors_ = true
+metadata/_edit_lock_ = true
+
+[node name="ImportDatabase" type="Button" parent="KNNOptionsBar"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -132.0
+offset_top = -26.5
+offset_right = 132.0
+offset_bottom = 26.5
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_we0wx")
+text = "Import database"
+
+[node name="ModesButton" type="OptionButton" parent="KNNOptionsBar"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.775
+anchor_top = 0.5
+anchor_right = 0.775
+anchor_bottom = 0.5
+offset_left = -59.0
+offset_top = -15.5
+offset_right = 59.0
+offset_bottom = 15.5
+grow_horizontal = 2
+grow_vertical = 2
+selected = 0
+item_count = 2
+popup/item_0/text = "Majoritaire"
+popup/item_0/id = 0
+popup/item_1/text = "Pondéré"
+popup/item_1/id = 1
+
+[node name="ResultLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.908333
+anchor_right = 1.0
+anchor_bottom = 0.983333
+offset_bottom = 3.05176e-05
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_we0wx")
+label_settings = SubResource("LabelSettings_we0wx")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BayesOptionsBar" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchor_top = 0.481
+anchor_right = 0.99975
+anchor_bottom = 0.675
+offset_top = -0.320038
+offset_right = 0.319946
+offset_bottom = 6.10352e-05
+
+[node name="ImportDatabase" type="Button" parent="BayesOptionsBar"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.345
+anchor_top = 0.5
+anchor_right = 0.345
+anchor_bottom = 0.5
+offset_left = -132.6
+offset_top = -26.5
+offset_right = 131.4
+offset_bottom = 26.5
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_we0wx")
+text = "Import database"
+
+[node name="ModesButton" type="OptionButton" parent="BayesOptionsBar"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.572625
+anchor_top = 0.5
+anchor_right = 0.572625
+anchor_bottom = 0.5
+offset_left = -58.9601
+offset_top = -15.5
+offset_right = 59.0399
+offset_bottom = 15.5
+grow_horizontal = 2
+grow_vertical = 2
+selected = 0
+item_count = 2
+popup/item_0/text = "Laplace"
+popup/item_0/id = 0
+popup/item_1/text = "AddAlpha"
+popup/item_1/id = 1
+metadata/_edit_use_anchors_ = true
+
+[node name="RepresentationsButton" type="OptionButton" parent="BayesOptionsBar"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.680438
+anchor_top = 0.50357
+anchor_right = 0.680438
+anchor_bottom = 0.50357
+offset_left = -58.9601
+offset_top = -15.5
+offset_right = 59.0399
+offset_bottom = 15.5
+grow_horizontal = 2
+grow_vertical = 2
+selected = 1
+item_count = 2
+popup/item_0/text = "Presence"
+popup/item_0/id = 0
+popup/item_1/text = "Frequence"
+popup/item_1/id = 1
+metadata/_edit_use_anchors_ = true
+
+[node name="NGramModesButton" type="OptionButton" parent="BayesOptionsBar"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.78825
+anchor_top = 0.50357
+anchor_right = 0.78825
+anchor_bottom = 0.50357
+offset_left = -58.9601
+offset_top = -15.5
+offset_right = 59.0399
+offset_bottom = 15.5
+grow_horizontal = 2
+grow_vertical = 2
+selected = 2
+item_count = 3
+popup/item_0/text = "Uni"
+popup/item_0/id = 0
+popup/item_1/text = "Bi"
+popup/item_1/id = 1
+popup/item_2/text = "Uni+Bi"
+popup/item_2/id = 2
+metadata/_edit_use_anchors_ = true
+
+[node name="ClusterOptionsBar" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchor_top = 0.481
+anchor_right = 0.99975
+anchor_bottom = 0.675
+offset_top = -0.320038
+offset_right = 0.319946
+offset_bottom = 6.10352e-05
+
+[node name="KClusters" type="HBoxContainer" parent="ClusterOptionsBar"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.230469
+anchor_top = 0.5
+anchor_right = 0.230469
+anchor_bottom = 0.5
+offset_left = -79.0
+offset_top = -15.5
+offset_right = 79.0
+offset_bottom = 15.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label" type="Label" parent="ClusterOptionsBar/KClusters"]
+layout_mode = 2
+text = "K clusters"
+metadata/_edit_use_anchors_ = true
+metadata/_edit_lock_ = true
+
+[node name="SpinBox" type="SpinBox" parent="ClusterOptionsBar/KClusters"]
+layout_mode = 2
+min_value = 2.0
+max_value = 3.0
+value = 3.0
+rounded = true
+metadata/_edit_use_anchors_ = true
+metadata/_edit_lock_ = true
+
+[node name="ImportDatabase" type="Button" parent="ClusterOptionsBar"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -132.0
+offset_top = -26.5
+offset_right = 132.0
+offset_bottom = 26.5
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_we0wx")
+text = "Import database"
+
+[node name="ModesButton" type="OptionButton" parent="ClusterOptionsBar"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.775
+anchor_top = 0.5
+anchor_right = 0.775
+anchor_bottom = 0.5
+offset_left = -59.0
+offset_top = -15.5
+offset_right = 59.0
+offset_bottom = 15.5
+grow_horizontal = 2
+grow_vertical = 2
+selected = 0
+item_count = 2
+popup/item_0/text = "Average"
+popup/item_0/id = 0
+popup/item_1/text = "Complete"
+popup/item_1/id = 1
