@@ -24,9 +24,9 @@ impl CleanData {
 
         let filters = vec![
             RuleFilter::DELETE("mixed emotions".to_string(), unvalid_emojis_re),
-            RuleFilter::DELETE("retweet".to_string(), auto_rules::user()?),
+            RuleFilter::DELETE("retweet".to_string(), auto_rules::retweet()?),
             RuleFilter::TRIM("url".to_string(), url),
-            RuleFilter::TRIM("user".to_string(), auto_rules::retweet()?),
+            RuleFilter::TRIM("user".to_string(), auto_rules::user()?),
             RuleFilter::TRIM("punctuation".to_string(), punctuation)
         ];
 
