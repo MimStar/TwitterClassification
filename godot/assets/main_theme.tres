@@ -9,5 +9,5 @@ GridContainer/constants/h_separation = 1
 GridContainer/constants/v_separation = 1
 LineEdit/constants/minimum_character_width = 1
 RichTextLabel/colors/default_color = Color(1, 1, 1, 1)
-RichTextLabel/font_sizes/normal_font_size = 12
+RichTextLabel/font_sizes/normal_font_size = 24
 RichTextLabel/styles/normal = SubResource("StyleBoxFlat_64js0")
