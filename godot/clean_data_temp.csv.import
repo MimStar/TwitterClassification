@@ -2,14 +2,12 @@
 
 importer="csv_translation"
 type="Translation"
-uid="uid://ddqsfr8i2v3ep"
+uid="uid://b3m1n8si25w2g"
+valid=false
 
 [deps]
 
-files=["res://clean_data_temp.Reading my kindle2  Love it Lee childs is good read.translation"]
-
 source_file="res://clean_data_temp.csv"
-dest_files=["res://clean_data_temp.Reading my kindle2  Love it Lee childs is good read.translation"]
 
 [params]
 
