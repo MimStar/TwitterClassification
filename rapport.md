@@ -10,6 +10,10 @@
       - [rule\_filter](#rule_filter)
       - [main](#main)
   - [Classification](#classification)
+    - [Naive](#naive)
+    - [KNN](#knn)
+    - [Clustering](#clustering)
+    - [Bayes](#bayes)
 
 
 
@@ -17,16 +21,19 @@
 
 ## Problématique
 
-Problématique ..
+Le projet consiste à explorer le développement d'une pipeline de traitement de données en vue de leur classification. Plus spécifiquement, on s'intéresse à associer des émotions (positive, neutre ou négative) à des *tweets*.
+
+Il s'agit alors de constituer une base, la nettoyer pour éviter le bruit et irrégularités impertinentes, puis de l'utiliser dans divers algorithmes de classification et de mesurer leurs résultats.  
 
 ## Architecture
 
-Vue & controlleur via le moteur open source godot.  
+Le logiciel suit un modèle classique MVC. La vue & controlleur sont réalisés aux seins du moteur open source Godot, et le modèle est construit en rust.
 
-Modèle de donnée et logique en rust.
+La glue entre le modèle et la vue sont réalisés en partie en rust, et d'autre en gdscript, un langage interne au moteur Godot.
 
-Une partie du modèle est exposée à godot -- la glue mais la majorité est isolée.
+La surface du modèle exposée à godot est minime -- la glue. La librairie est construite de sorte à ce qu'elle puisse subsister indépendamment de Godot.
 
+Vous retrouverez dans ce projet l'arborescente (abrégée) suivante :
 
 | nom | brève description |
 |-----|-------------------|
@@ -42,11 +49,13 @@ Une partie du modèle est exposée à godot -- la glue mais la majorité est iso
 | [assets](godot/assets/) | Définission du thème de l'application. |
 | [scenes](godot/scenes/) | Scènes, éléments GUI, etc. |
 | [scripts](godot/scripts/) | Scripts de glue de la vue. |
+| *test-rust/ testing* | *un "playground" de test rust.* |
+| *[rapport.md](rapport.md)* | *le rapport de ce projet.* |
 
 ## Organisation
 
-Rémy - GUIs, algorithmes de classification & glue.  
-Shems - Nettoyage de données, tooling & rapport.
+Rémy - GUIs, knn, clustering, bayes & glue.  
+Shems - Nettoyage, naïf, tooling & rapport.
 
 # En profondeur
 
@@ -94,9 +103,11 @@ Nous nous servons de la librairie `csv_sniffer` pour détecter la présence ou n
   - Quelque chose que rust peut parse en `String` ? **Non**, il existe de nombreux encodages autre qu'UTF-8, en particuliers les bases de données de tests fournies en contiennent d'autres.
   - Il faut alors vérifier que la donnée est encodable pour X encodages choisis arbitrairements.
  
-- Mais.. ce n'est pas terminé. Si c'est bien du texte, rien ne nous garantit encore qu'il s'agisse d'un header. Cela pourrait simplement être un tableur rempli entièrement de texte.
-
-- Si c'est le cas, nous ne sommes pas non plus garantit que le tableur ne contient *PAS* de header. Il faut alors estimer la probabilité qu'il s'agisse d'un header selon les relations de tailles entres les différentes cellules ...
+- On peut maintenant déterminer si la première ligne peut-être décodé en texte. Et qu'en fait-on ?
+  - Si c'est le cas, c'est un header ? **Non**, en réalité, il y a peu de chance que l'on ne parvienne pas à encoder une donnée en texte. `6` peut autant être considéré comme du texte que `"6"`.
+  - Alors on cherche des headers qui ne peuvent être convertit *qu'en* texte ? **Non**, (1) rien n'oblige un header à être strictement textuel.
+  - (2) On impose arbitrairement cette contrainte, on détermine alors que c'est un header dans ce cas ? **Non**, rien ne nous permet cette conclusion - le tableur pourrait être entièrement rempli de texte, et cette première ligne pourrait alors être de la simple donnée.
+  - (3) Si le tableau est rempli de texte, il n'y a donc pas de header, que de la donnée ? **Non**, il est possible qu'il y ait bien des headers, le déterminer devient probabilistique, selon la relation de taille entre les colonnes du headers et le reste du tableur par exemple ...
 
 En bref, le travail est long et fastidieux, pour un résultat qui de toute manière est statistique, donc incertains.
 
@@ -159,8 +170,23 @@ Elle suit aussi l'application des filtres, pour fournir un journal d'opération 
 
 ## Classification
 
+### Naive
 
+La classification naïve consiste à classifier les messages en fonctions de la fréquence d'apparation de mots qui ont été manuellement selectionnés et attribué à une polarité, soit positif, soit négatif.
 
+Le modèle a plusieurs limitation. Déjà, il ne prend pas en compte les relations entre les mots. "Un beau *insultez votre nom d'oiseau préféré*" est évidemment négatif. Pourtant, on dira ici que c'est plutôt neutre, s'il on considère du moins que beau est positif.
+
+Ce qui nous ammène à la seconde limitation - la fiabilité de la sélection. Mais le problème majeure reste l'absence de considération pour le contexte.
+
+Notre implémentation est plutôt simple, et est configurable par un paramètre de poids qui détermine la "rigueur" de la classification, de 0.5 à 1 (inclus). Ce poids correspond à la proportion minimale de mots d'une polarité (parmis les mots polarisés, donc excluant les mots neutres) pour que le message soit associé à la même polarité.
+
+A 1, un message doit contenir uniquement des mots d'une polarité pour y être associé, autrement, il est neutre. A 0.5, il suffit qu'il y ait plus de mots positifs que négatifs (et inversement) pour qu'il soit classifié tel quel.
+
+### KNN
+
+### Clustering
+
+### Bayes
 
 
 

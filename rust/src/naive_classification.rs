@@ -42,8 +42,8 @@ fn record_analysis(record: StringRecord, pos_reg: &Vec<String>, neg_reg: &Vec<St
     Ok(())
 }
 
-// weight is between 0 and 1
-// 0 means if positives > negatives, polarity is 4, and vice versa
+// weight is between 0.5 and 1
+// 0.5 means if positives > negatives, polarity is 4, and vice versa
 // 1 means polarity is 0/4 if there is exclusively negative or positive words respectively, 2 otherwise.
 fn compute_polarity_with_weight(negatives: u32, positives: u32, weight: f32) -> Result<u32, Box<dyn Error>> {
     let f_negatives : f32 = NumCast::from(negatives).ok_or(format!("Cannot cast {negatives} to f32"))?;
