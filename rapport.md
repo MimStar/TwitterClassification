@@ -23,6 +23,11 @@
       - [Clustering avec kodama](#clustering-avec-kodama)
       - [Classification par vote majoritaire](#classification-par-vote-majoritaire)
     - [Bayes](#bayes)
+      - [Pipeline](#pipeline-1)
+      - [Grammage](#grammage)
+      - [Representation](#representation)
+      - [Smoothing](#smoothing)
+      - [Classification](#classification-1)
 
 
 
@@ -63,8 +68,8 @@ Vous retrouverez dans ce projet l'arborescente (abrégée) suivante :
 
 ## Organisation
 
-Rémy - GUIs, knn, clustering, bayes & glue.  
-Shems - Nettoyage, naïf, tooling & rapport.
+Rémy - GUIs, knn, clustering, bayes, glue & évaluation.  
+Shems - Nettoyage, tooling, naïf, rapport & idiomatisation.
 
 # En profondeur
 
@@ -449,5 +454,145 @@ Nous proposons aussi une méthode d'évaluation de cluster `clustering_evaluate`
 
 ### Bayes
 
-Enfin, la dernière partie de notre travail concernait la classification bayésienne.
+Enfin, la dernière partie de notre travail concernait la classification bayésienne.  
+C'est une classification probabiliste - Elle consiste a définir des attributs à nos données, puis à évaluer la probabilité d'appartenance à une classe selon ces attributs.  
 
+Naïvement, on considère que les attributs sont indépendants (c'est ce qui a été fait ici), la probabilité qu'un mot soit d'une classe correspond donc à la probabilité de chacun de ses attributs de faire partie de cette classe.
+
+Un problème peut en revanche survenir dans ce cas là. En effet, il suffit qu'un attribut n'existe jamais pour une classe donnée, pour que sa simple présence, même dans un corpus de milliers d'attributs, le rende parfaitement immiscible à cette classe. Celà semble plutôt irréaliste, alors on fait additionnellement un "lissage" sur cette probabilité. 
+
+#### Pipeline
+
+On en détuit donc une série d'éléments à définir plus précisemment.
+- Sur quelle donnée construit-on les attributs ?
+- Qu'est ce qu'un attribut ?
+- Quel lissage appliquer ?
+
+Dans les sections suivante, nous abordons comment ces modules ont été implémentés.
+
+#### Grammage
+
+On propose un `NgramMode`, qui détermine sur combien de mots consécutifs est construit un attribut. En l'occurence, on propose un Uni, Bi et Uni-Bigrammes.
+
+```rs
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum NgramMode {
+    Uni,
+    Bi,
+    UniBi,
+}
+
+impl NgramMode {
+    fn tokeniser_tweet(&self, tweet: &str) -> Vec<String> {
+        let unigrams: Vec<String> = tweet.split_whitespace()
+            .map(|w| w.to_lowercase())
+            .filter(|w| w.chars().count() >= 4)
+            .collect();
+
+        let mut tokens = Vec::new();
+
+        match self {
+            NgramMode::Uni => {
+                tokens = unigrams;
+            },
+            NgramMode::Bi => {
+                for window in unigrams.windows(2) {
+                    tokens.push(format!("{} {}", window[0], window[1]));
+                }
+            },
+            NgramMode::UniBi => {
+                tokens.extend(unigrams.clone());
+                for window in unigrams.windows(2) {
+                    tokens.push(format!("{} {}", window[0], window[1]));
+                }
+            }
+        }
+        
+        tokens
+    }
+}
+
+// ...
+```
+<small>Extrait de [rust/src/bayes/ngram.rs](rust/src/bayes/ngram.rs)</small>
+
+#### Representation
+
+Ensuite, pour la représentation des attributs, on en propose de deux type : présence et fréquence.
+
+Par présence signifie que l'on cherche la probabilité que cet attribut, peu importe le nombre d'occurence, apparaisse dans la classe cible. Par fréquence, on prend eb compte le nombre d'occurences.
+
+```rs
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Representation {
+    Presence,
+    Frequence,
+}
+
+impl Representation {
+    pub fn tokens_to_count(&self, tokens: Vec<String>) -> Vec<String> {
+        match self {
+            Representation::Presence => {
+                let unique: HashSet<_> = tokens.into_iter().collect();
+                unique.into_iter().collect()
+            },
+            Representation::Frequence => tokens
+        }
+    }
+}
+
+// ...
+```
+<small>Extrait de [rust/src/bayes/representation.rs](rust/src/bayes/representation.rs)</small>
+
+#### Smoothing
+
+Enfin, on propose 2 lissage alpha classique - Laplace et Lidstone, ainsi qu'un lissage Add-alpha générique.
+```rs
+#[derive(Debug, Clone, Copy)]
+pub enum VoteType {
+    Laplace,
+    Lidstone,
+    AddAlpha(f64),
+}
+
+impl From<VoteType> for f64 {
+    fn from(value: VoteType) -> Self {
+        match value {
+            VoteType::Laplace => 1.,
+            VoteType::Lidstone => 0.5,
+            VoteType::AddAlpha(alpha) => alpha,
+        }
+    }
+}
+
+// ...
+```
+<small>Extrait de [rust/src/bayes/smoothing.rs](rust/src/bayes/smoothing.rs)</small>
+
+#### Classification
+
+Avec les modules précédemment définis, on peut ainsi procéder à la classification. On définit une structure `BayesModel` qui construit un modèle statistique -
+```rs
+#[derive(Debug)]
+struct BayesModel {
+    log_prior: HashMap<i32, f64>,
+    log_prob: HashMap<i32, HashMap<String, f64>>,
+    vocab: HashSet<String>,
+    vocab_taille: usize,
+    total_mots_par_classe: HashMap<i32, usize>,
+    representation: Representation,
+    ngram_mode: NgramMode,
+    alpha: f64,
+}
+```
+
+On s'attardera ici sur `log_prior` et `log_prob`.
+
+Le premier correspond à la probabilité "a priori" de chaque classe. C'est-à-dire $P(\text{classe})$ la probabilité qu'un message tiré aléatoirement dans la base soit de chaque classe, elle est donc basée simplement sur la fréquence des classes. 
+
+Le second correspond à la probabilité $P(\text{attribut} \mid \text{classe})$, donc pour chaque classe, la probabilité d'apparition de chaque "attribut", définit selon les modules présentés précédemment.
+
+Tout deux sont annotés "log" parce qu'on utilise ici le logarithme des probabilités. Ainsi, au lieu de multiplier les probabilités, on additionne les logarithmes des probabilités. Celà permet d'éviter les underflows, est plus efficace, tout en étant mathématiquement équivalent lorsqu'il s'agit de comparer des classes.
+
+Vous trouverez plus de détails sur l'implémentation dans la méthode `new` et `classifier` de `BayesModel` dans [rust/src/bayes.rs](rust/src/bayes.rs).
