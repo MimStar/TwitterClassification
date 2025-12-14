@@ -47,10 +47,12 @@ enum VoteType {
 struct BayesModel {
     log_prior: HashMap<i32, f64>,
     log_prob: HashMap<i32, HashMap<String, f64>>,
+    vocab: HashSet<String>,
     vocab_taille: usize,
     total_mots_par_classe: HashMap<i32, usize>,
     representation: Representation,
     ngram_mode: NgramMode,
+    alpha: f64,
 }
 
 #[godot_api]
@@ -131,6 +133,7 @@ impl Bayes{
             }
         };
 
+        // Division du dataset : 2/3 entraînement, 1/3 test
         let (train, test) = diviser_donnees_stratifiee(&all, 2.0 / 3.0);
         if train.is_empty() || test.is_empty() {
             self.signals().log_sent().emit(&GString::from("Base d'entraînement ou test vide"));
@@ -139,7 +142,7 @@ impl Bayes{
 
         let model = BayesModel::new(&train, vote_type, representation, ngram_mode);
         
-        let mut matrice_confusion = [[0usize; 3]; 3];
+        let mut matrice_confusion = [[0; 3]; 3];
         let index_map : HashMap<i32, usize> = [(0,0), (2,1), (4,2)].iter().cloned().collect();
         
         for tweet in &test {
@@ -158,6 +161,8 @@ impl Bayes{
 
 impl BayesModel {
     fn new(data: &[TweetEtiquete], vote: VoteType, representation: Representation, ngram_mode: NgramMode) -> Self {
+
+        // Comptage
         let mut class_counts: HashMap<i32, usize> = HashMap::new();
         for t in data {
             *class_counts.entry(t.etiquette).or_insert(0) += 1;
@@ -169,6 +174,7 @@ impl BayesModel {
         for t in data {
             let tokens = tokeniser_tweet(&t.contenu, ngram_mode);
             
+            // Selon le mode, on garde soit tous les mots (Fréquence), soit les uniques (Présence)
             let tokens_to_count: Vec<String> = match representation {
                 Representation::Presence => {
                     let unique: HashSet<_> = tokens.into_iter().collect();
@@ -176,7 +182,8 @@ impl BayesModel {
                 },
                 Representation::Frequence => tokens
             };
-
+            
+            // Remplissage de la matrice de comptage
             let map = word_counts.entry(t.etiquette).or_insert_with(HashMap::new);
             for w in tokens_to_count {
                 *map.entry(w.clone()).or_insert(0) += 1;
@@ -184,17 +191,20 @@ impl BayesModel {
             }
         }
 
+        // Définition du paramètre de lissage
         let alpha = match vote {
             VoteType::Laplace => 1.0,
             VoteType::AddAlpha => 0.5,
         };
-
+        
+        // Calcul des Priors
         let total_documents = class_counts.values().sum::<usize>() as f64;
         let mut log_prior = HashMap::new();
         for (&cls, &cnt) in &class_counts {
             log_prior.insert(cls, (cnt as f64 / total_documents).ln());
         }
-
+        
+        // Calcul des Likelihoods
         let mut log_prob: HashMap<i32, HashMap<String, f64>> = HashMap::new();
         let vocab_taille = vocab.len() as f64;
         
@@ -218,13 +228,16 @@ impl BayesModel {
         Self {
             log_prior,
             log_prob,
+            vocab : vocab.clone(),
             vocab_taille: vocab.len(),
             total_mots_par_classe,
             representation,
             ngram_mode,
+            alpha,
         }
     }
 
+    // Retourne la classe ayant le score (log-probabilité) le plus élevé
     fn classifier(&self, tweet: &str) -> Option<i32> {
         let tokens = tokeniser_tweet(tweet, self.ngram_mode);
         
@@ -237,22 +250,36 @@ impl BayesModel {
         };
 
         let mut scores: HashMap<i32, f64> = HashMap::new();
+
         for (&cls, &prior) in &self.log_prior {
             let mut score = prior;
-            if let Some(ll_map) = self.log_prob.get(&cls) {
-                for w in &tokens_to_score {
-                    let log_lk = ll_map.get(w).cloned().unwrap_or_else(|| {
-                        let class_total = *self.total_mots_par_classe.get(&cls).unwrap_or(&0);
-                        let alpha_lissage = 1.0; 
-                        let denom = class_total as f64 + alpha_lissage * self.vocab_taille as f64;
-                        (alpha_lissage / denom).ln()
-                    });
-                    score += log_lk;
+
+            // On récupère les infos de la classe
+            let ll_map = self.log_prob.get(&cls).unwrap();
+            let class_total = *self.total_mots_par_classe.get(&cls).unwrap_or(&0);
+            
+            // Calcul de la probabilité par défaut pour un mot inconnu dans cette classe (mais connu du vocabulaire global)
+            let denom = class_total as f64 + self.alpha * self.vocab_taille as f64;
+            let log_defaut = (self.alpha / denom).ln();
+
+            for w in &tokens_to_score {
+                // 1. Si le mot n'est pas dans le vocabulaire global d'entrainement, on l'ignore totalement
+                if !self.vocab.contains(w) {
+                    continue; 
                 }
+
+                // 2. On cherche la proba du mot dans la classe, sinon on utilise la proba lissée
+                let log_lk = ll_map.get(w).cloned().unwrap_or(log_defaut);
+                
+                score += log_lk;
             }
             scores.insert(cls, score);
         }
-        scores.into_iter().max_by(|a, b| a.1.partial_cmp(&b.1).unwrap()).map(|(c,_)| c)
+
+            // on renvoie une classe par défaut ou aléatoire si égalité parfaite
+            scores.into_iter()
+            .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|(c,_)| c)
     }
 }
 
@@ -265,10 +292,11 @@ fn charger_donnees(chemin: &str) -> Result<Vec<TweetEtiquete>, Box<dyn std::erro
         if i == 0 {
             continue;
         }
-        let cols: Vec<&str> = l.split(',').collect();
-        if cols.len() >= 2 {
-            if let Ok(e) = cols[0].parse::<i32>() {
-                let contenu = cols[1..].join(",");
+        let colonnes: Vec<&str> = l.split(',').collect();
+        if colonnes.len() >= 2 {
+            if let Ok(e) = colonnes[0].parse::<i32>() {
+                let contenu_raw = colonnes[1..].join(",");
+                let contenu = contenu_raw.trim_matches('"').to_string();
                 donnees.push(TweetEtiquete {
                     contenu,
                     etiquette: e,
@@ -326,14 +354,18 @@ fn diviser_donnees_stratifiee(donnees: &[TweetEtiquete], ratio_train: f64) -> (V
     (entrainement, test)
 }
 
-fn format_matrice_confusion(matrice: &[[usize; 3]]) -> String {
-    let n_pos_reel = matrice[2][0] + matrice[2][1] + matrice[2][2];
-    let n_neg_reel = matrice[0][0] + matrice[0][1] + matrice[0][2];
-    let n_neu_reel = matrice[1][0] + matrice[1][1] + matrice[1][2];
-    let n_pos_estime = matrice[0][2] + matrice[1][2] + matrice[2][2];
-    let n_neg_estime = matrice[0][0] + matrice[1][0] + matrice[2][0];
-    let n_neu_estime = matrice[0][1] + matrice[1][1] + matrice[2][1];
+// Formate la matrice de confusion selon le format demandé
+fn format_matrice_confusion(matrice: &[[i32; 3]]) -> String {
+    let n_pos_reel = matrice[2][0] + matrice[2][1] + matrice[2][2]; // Réel: Positif (index 2)
+    let n_neg_reel = matrice[0][0] + matrice[0][1] + matrice[0][2]; // Réel: Négatif (index 0)
+    let n_neu_reel = matrice[1][0] + matrice[1][1] + matrice[1][2]; // Réel: Neutre (index 1)
+    
+    let n_pos_estime = matrice[0][2] + matrice[1][2] + matrice[2][2]; // Estimé: Positif
+    let n_neg_estime = matrice[0][0] + matrice[1][0] + matrice[2][0]; // Estimé: Négatif
+    let n_neu_estime = matrice[0][1] + matrice[1][1] + matrice[2][1]; // Estimé: Neutre
+    
     let total = n_pos_reel + n_neg_reel + n_neu_reel;
+
     format!(
         "[table=5]\n\
         [cell]Réel/Estimé[/cell][cell]Positive[/cell][cell]Négatif[/cell][cell]Neutre[/cell][cell]Total réel[/cell]\n\
@@ -342,9 +374,28 @@ fn format_matrice_confusion(matrice: &[[usize; 3]]) -> String {
         [cell]Neutre[/cell][cell]{}[/cell][cell]{}[/cell][cell]{}[/cell][cell]{}[/cell]\n\
         [cell]Total estimé[/cell][cell]{}[/cell][cell]{}[/cell][cell]{}[/cell][cell]{}[/cell]\n\
         [/table]",
-        matrice[2][2], matrice[2][0], matrice[2][1], n_pos_reel,
-        matrice[0][2], matrice[0][0], matrice[0][1], n_neg_reel,
-        matrice[1][2], matrice[1][0], matrice[1][1], n_neu_reel,
-        n_pos_estime, n_neg_estime, n_neu_estime, total
+        // Ligne Positive réelle
+        matrice[2][2], // TP_pos
+        matrice[2][0], // FN_pos→neg
+        matrice[2][1], // FN_pos→neu
+        n_pos_reel,
+        
+        // Ligne Négative réelle
+        matrice[0][2], // FP_neg→pos
+        matrice[0][0], // TP_neg
+        matrice[0][1], // FN_neg→neu
+        n_neg_reel,
+        
+        // Ligne Neutre réelle
+        matrice[1][2], // FP_neu→pos
+        matrice[1][0], // FP_neu→neg
+        matrice[1][1], // TP_neu
+        n_neu_reel,
+        
+        // Totaux estimés
+        n_pos_estime,
+        n_neg_estime,
+        n_neu_estime,
+        total
     )
 }

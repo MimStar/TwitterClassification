@@ -3,13 +3,11 @@
 importer="csv_translation"
 type="Translation"
 uid="uid://bkd5o0dkaxylh"
+valid=false
 
 [deps]
 
-files=["res://clean_data_temp.Still not emotionally prepared for #AvengersEndgame tomorrow <U+0001F616>.translation"]
-
 source_file="res://clean_data_temp.csv"
-dest_files=["res://clean_data_temp.Still not emotionally prepared for #AvengersEndgame tomorrow <U+0001F616>.translation"]
 
 [params]
 

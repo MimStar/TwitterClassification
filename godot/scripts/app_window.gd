@@ -6,8 +6,12 @@ var csv_path
 var filedialog
 
 func clean_main_window():
+	$LogLabel.text = ""
 	for child in $MainWindow.get_children():
-		child.queue_free()
+		if child.name != "algo_container":
+			child.queue_free()
+		else:
+			child.hide()
 	pass
 
 func _on_import_button_button_up() -> void:
@@ -33,8 +37,10 @@ func _on_clean_csv_file_selected(path):
 	$LogLabel.text = "File cleaned"
 	var editor_container = csv_editor_scene.instantiate()
 	editor_container.csv_path = csv_path
+	$MainWindow/algo_container.database_path = csv_path
 	editor_container.csv_success.connect(_on_csv_success)
 	editor_container.csv_error.connect(_on_csv_error)
+	editor_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	$MainWindow.add_child(editor_container)
 	$ButtonList/ImportButton.disabled = false
 	$ButtonList/AlgoButton.disabled = false
@@ -48,6 +54,8 @@ func _on_editor_button_button_up() -> void:
 	editor_container.csv_path = csv_path
 	editor_container.csv_success.connect(_on_csv_success)
 	editor_container.csv_error.connect(_on_csv_error)
+	editor_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	$MainWindow.add_child(editor_container)
 	pass # Replace with function body.
 
 func _on_csv_success():
@@ -62,5 +70,5 @@ func _on_algo_button_button_up() -> void:
 	clean_main_window()
 	$ButtonList/EditorButton.disabled = false
 	$ButtonList/AlgoButton.disabled = true
-	
+	$MainWindow/algo_container.show()
 	pass # Replace with function body.

@@ -167,26 +167,38 @@ fn vote_majoritaire(proches_voisins: &[(f64, i32)]) -> Option<i32> {
     for (_, etiquette) in proches_voisins {
         *votes.entry(*etiquette).or_insert(0) += 1;
     }
+
+    let max_votes = votes.values().max().copied().unwrap_or(0);
     
-    votes
-        .into_iter()
-        .max_by_key(|&(_, count)| count)
-        .map(|(classe, _)| classe)
+    //On prend toutes les classes qui ont les votes max
+    let candidats: Vec<i32> = votes.iter()
+        .filter(|&(_, &count)| count == max_votes)
+        .map(|(&cls, _)| cls)
+        .collect();
+    
+    if candidats.len() == 1 {
+        Some(candidats[0])
+    } else {
+        // On retourne la première classe trouvée dans les proches voisins qui est dans les candidats
+        for (_, etiquette) in proches_voisins {
+            if candidats.contains(etiquette) {
+                return Some(*etiquette);
+            }
+        }
+        None // ça ne doit pas arriver si k > 0
+    }
 }
 
 /// Vote pondéré par l'inverse de la distance
 /// Les voisins plus proches ont plus de poids
 fn vote_pondere(proches_voisins: &[(f64, i32)]) -> Option<i32> {
     let mut votes_ponderes: HashMap<i32, f64> = HashMap::new();
-    
+    let epsilon = 1e-5;
+
     for (distance, etiquette) in proches_voisins {
         // Éviter la division par zéro en ajoutant un petit epsilon
-        let poids = if *distance == 0.0 {
-            1.0 // Poids maximum pour distance nulle
-        } else {
-            1.0 / distance // Inverse de la distance
-        };
-        
+        let poids = 1.0 / (distance + epsilon);
+
         *votes_ponderes.entry(*etiquette).or_insert(0.0) += poids;
     }
     
@@ -211,7 +223,8 @@ fn charger_donnees(chemin: &str) -> Result<Vec<TweetEtiquete>, Box<dyn std::erro
         let colonnes: Vec<&str> = ligne.split(',').collect();
         if colonnes.len() >= 2 {
             if let Ok(etiquette) = colonnes[0].parse::<i32>() {
-                let contenu = colonnes[1..].join(","); // Gérer les tweets avec des virgules
+                let contenu_raw = colonnes[1..].join(",");
+                let contenu = contenu_raw.trim_matches('"').to_string();
                 donnees.push(TweetEtiquete {
                     contenu,
                     etiquette,
@@ -284,7 +297,7 @@ fn diviser_donnees_stratifiee(donnees: &[TweetEtiquete], ratio_train: f64) -> (V
     (entrainement, test)
 }
 
-/// Formate la matrice de confusion selon le format demandé
+// Formate la matrice de confusion selon le format demandé
 fn format_matrice_confusion(matrice: &[[i32; 3]]) -> String {
     let n_pos_reel = matrice[2][0] + matrice[2][1] + matrice[2][2]; // Réel: Positif (index 2)
     let n_neg_reel = matrice[0][0] + matrice[0][1] + matrice[0][2]; // Réel: Négatif (index 0)

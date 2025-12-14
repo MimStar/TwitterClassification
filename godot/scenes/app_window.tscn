@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://cbk6wl710j118"]
+[gd_scene load_steps=3 format=3 uid="uid://cbk6wl710j118"]
 
 [ext_resource type="Script" uid="uid://b3egidurnkjlj" path="res://scripts/app_window.gd" id="1_kmlmw"]
+[ext_resource type="PackedScene" uid="uid://ccm3322ydum81" path="res://scenes/algo_container.tscn" id="2_r0m1a"]
 
 [node name="AppWindow" type="Control"]
 layout_mode = 3
@@ -22,11 +23,11 @@ grow_vertical = 2
 [node name="ButtonList" type="VBoxContainer" parent="."]
 layout_mode = 2
 anchor_right = 0.158
-anchor_bottom = 0.146
+anchor_bottom = 1.0
 offset_right = -0.240005
-offset_bottom = -0.12001
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 10
 
 [node name="ImportButton" type="Button" parent="ButtonList"]
 layout_mode = 2
@@ -47,9 +48,16 @@ layout_mode = 1
 anchor_left = 0.157813
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_right = 0.000610352
 grow_horizontal = 2
 grow_vertical = 2
-metadata/_edit_use_anchors_ = true
+
+[node name="algo_container" parent="MainWindow" instance=ExtResource("2_r0m1a")]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+offset_right = 0.0
 
 [node name="LogLabel" type="Label" parent="."]
 layout_mode = 1
