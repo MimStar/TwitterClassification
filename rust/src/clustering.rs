@@ -277,8 +277,8 @@ fn generate_dendrogram_svg(dendrogram: &kodama::Dendrogram<f64>, tweets: &[Tweet
     get_leaf_order(root_idx, &children_map, &mut visual_order);
 
     let width = 1200.0;
-    let height = 800.0;
-    let margin = 50.0;
+    let height = 600.0;
+    let margin = 20.0;
     let drawing_height = height - 2.0 * margin;
     let drawing_width = width - 2.0 * margin;
     let max_dissim = steps.last().map(|s| s.dissimilarity).unwrap_or(1.0).max(0.0001);
@@ -292,24 +292,23 @@ fn generate_dendrogram_svg(dendrogram: &kodama::Dendrogram<f64>, tweets: &[Tweet
 
     let mut svg = String::with_capacity(50 * 1024);
 
-    let _ = write!(&mut svg, r##"<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" viewBox="0 0 {} {}"><rect width="100%" height="100%" fill="#202020"/><style>.link {{ stroke: #4a90e2; stroke-width: 2; fill: none; }} .text {{ font-family: sans-serif; font-size: 12px; fill: #e0e0e0; }} .grid {{ stroke: #333; stroke-width: 1; stroke-dasharray: 4; }}</style>"##, width, height, width, height);
+    let _ = write!(&mut svg, r##"<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" viewBox="0 0 {} {}"><rect width="100%" height="100%" fill="#202020"/><style>.link {{ stroke: #4a90e2; stroke-width: 2; fill: none; }}</style>"##, width, height, width, height);
     
-    let _ = write!(&mut svg, r#"<text x="{}" y="30" font-size="20" fill="white" text-anchor="middle">Dendrogramme (n={})</text>"#, width/2.0, n);
-
     let mut node_pos: HashMap<usize, (f64, f64)> = HashMap::new();
     let base_y = margin + drawing_height;
 
+    // Dessin des feuilles (POINTS SEULEMENT)
     for i in 0..n {
         if let Some(&x) = leaf_x_positions.get(&i) {
             node_pos.insert(i, (x, base_y));
+            // Couleur selon le label (Positif=Vert, Négatif=Rouge, Autre=Gris)
             let color = match tweets[i].label { 4 => "#4caf50", 0 => "#f44336", _ => "#9e9e9e" };
-            let safe_text = if tweets[i].contenu.len() > 15 { format!("{}...", &tweets[i].contenu[..15]) } else { tweets[i].contenu.clone() }
-                .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
             
-            let _ = write!(&mut svg, r#"<circle cx="{}" cy="{}" r="4" fill="{}" /><g transform="translate({}, {}) rotate(45)"><text x="5" y="0" class="text" font-size="10">{}</text></g>"#, x, base_y + 10.0, color, x, base_y + 15.0, safe_text);
+            let _ = write!(&mut svg, r#"<circle cx="{}" cy="{}" r="4" fill="{}" />"#, x, base_y, color);
         }
     }
 
+    // Dessin des liens (branches de l'arbre)
     for (i, step) in steps.iter().enumerate() {
         let h_ratio = step.dissimilarity / max_dissim;
         let merge_y = base_y - (h_ratio * drawing_height);
@@ -320,6 +319,7 @@ fn generate_dendrogram_svg(dendrogram: &kodama::Dendrogram<f64>, tweets: &[Tweet
         if let (Some(&(x1, y1)), Some(&(x2, y2))) = (node_pos.get(&c1), node_pos.get(&c2)) {
             let new_x = (x1 + x2) / 2.0;
             node_pos.insert(new_cluster, (new_x, merge_y));
+            // Lignes du dendrogramme
             let _ = write!(&mut svg, r#"<path d="M{} {} V{} H{} V{}" class="link" />"#, x1, y1, merge_y, x2, y2);
         }
     }
@@ -328,7 +328,7 @@ fn generate_dendrogram_svg(dendrogram: &kodama::Dendrogram<f64>, tweets: &[Tweet
     svg
 }
 
-// Structure pour gérer les ensembles disjoints, pour couper l'arbre
+// Structure pour gérer les ensembles disjoints pour couper l'arbre
 struct UnionFind {
     parent: Vec<usize>,
 }

@@ -3,3 +3,4 @@ rust/target
 godot/.godot/
 godot/android/
 godot/clean_data_temp.*
+export/
