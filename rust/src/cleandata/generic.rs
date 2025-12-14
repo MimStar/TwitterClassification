@@ -69,30 +69,30 @@ impl CleanData {
             
             if let Some(log_msg) = logs {
                 self.signals()
-                            .log_sent()
-                            .emit(&GString::from(log_msg));
+                    .log_sent()
+                    .emit(&GString::from(log_msg));
                         
-                        if let Some(counter) = filter_counters.get_mut(filter) {
-                            *counter += 1; 
-                        }
-                    }
-                    
-                    match filtered_result {
-                        // Entering here means the filters trimmed the data 
-                        //  up to the point that it is empty.
-                        // We should thus move to the next record, and drop this one.
-                        // - dropping means not recording it in the output csv.
-                        None => break,
-                        Some(passed) => {
-                            if let Cow::Owned(new_value) = passed {
-                                processed_entry = new_value;
-                            }
-                        }
-                    }
-                } else {   // No filter left to apply, and some data is remaining
-                    saved_records.push([rating, processed_entry]);
-                    break;
+                if let Some(counter) = filter_counters.get_mut(filter) {
+                    *counter += 1; 
                 }
+            }
+                    
+            match filtered_result {
+                // Entering here means the filters trimmed the data 
+                //  up to the point that it is empty.
+                // We should thus move to the next record, and drop this one.
+                // - dropping means not recording it in the output csv.
+                None => break,
+                Some(passed) => {
+                    if let Cow::Owned(new_value) = passed {
+                        processed_entry = new_value;
+                    }
+                }
+            }
+        } else {   // No filter left to apply, and some data is remaining
+            saved_records.push([rating, processed_entry]);
+            break;
+        }
             }
         }
         
@@ -103,17 +103,33 @@ impl CleanData {
             .collect::<Vec<_>>();
     
         self.signals()
-        .log_sent()
-        .emit(&GString::from(
-            format!("Removed {} dupplicates.", prev_size - uniqued_records.len())
-        ));
+            .log_sent()
+            .emit(&GString::from(
+                format!("Removed {} dupplicates.", prev_size - uniqued_records.len())
+            ));
     
         let mut wtr = Writer::from_path(output_path)?;
         for record in uniqued_records {
             wtr.write_record(record)?;
         }
 
+        let final_logs = filter_counters
+            .iter()
+            .map(|(rule, count)|{
+                format!("{}: {}\n", rule.name(), count)
+            })
+            .collect::<Vec<String>>()
+            .concat();
+        
+        self.signals()
+            .log_sent()
+            .emit(
+                &GString::from(final_logs)
+            );
+        
         let path = fs::canonicalize(PathBuf::from(output_path))?;
         Ok(path.display().to_string())
     }
+
+
 }
