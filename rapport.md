@@ -19,6 +19,9 @@
       - [Distance](#distance)
       - [Vote](#vote)
     - [Clustering](#clustering)
+      - [Pipeline](#pipeline)
+      - [Clustering avec kodama](#clustering-avec-kodama)
+      - [Classification par vote majoritaire](#classification-par-vote-majoritaire)
     - [Bayes](#bayes)
 
 
@@ -349,6 +352,8 @@ Le clustering n'est pas une méthode de classification à proprement parler, mai
 
 Ainsi, l'idée est de regrouper la donnée par similarité - le clustering - puis d'assigner un sens à chaque groupe constitués. Cette seconde étape peut donc soit être réalisée manuellement par un humain qui pourra intuitivement repérer les subtilités du language humain, soit en utilisant un second traitement automatique, soit dédiée à cette pipeline, soit basée sur un autre algorithme de classification. (Par exemple, on pourrait d'abord construire les clusters, puis moyenner avec la classification naive pour déterminer les classes de chaque cluster)
 
+#### Pipeline
+
 Ce clustering s'opère en plusieurs étapes. L'idée vulgarisée est d'abord de considérer tous les points, i.e. nos données, comme des clusters indépendants. On calcul ensuite la distance entre chaque cluster, et on regroupe chaque cluster avec son voisin le plus proche. On répète l'opération jusqu'à ce qu'il ne reste plus qu'un cluster, et on obtient ainsi un arbre de regroupement dans lequel on peut "couper" l'arbre à une hauteur donnée pour obtenir le nombre de clusters souhaités. (Il est aussi possible de faire l'inverse, partir d'un unique cluster jusqu'à n'avoir plus que des clusters composés d'un seul point.)
 
 On a donc deux modules à déterminer - comme précédemment, calculer la distance entre des données, mais aussi comment calculer la distance entre des clusters.  
@@ -356,6 +361,8 @@ En l'occurence, notre programme est compatible avec la méthode Averrage, Comple
 - Averrage est plutôt explicite, elle consiste à prendre la moyenne des distances entre toutes les paires de points des deux clusters.
 - Complete consiste à prendre la distance maximale des distances de paires.
 - Ward est plus particulière, elle consiste à prendre comme distance "l'augmentation de variance" qu'impliquerai le fait de fusionner ces deux clusters. Un caveat de cette méthode est que la distance entre deux points est contrainte à une distance euclidienne.
+
+#### Clustering avec kodama
 
 Dans ce cadre, nous devions développer un programme permettant de classifier un tweet donné en entrée. Notre implémentation se base sur la crate [kodama](https://docs.rs/kodama/latest/kodama).
 
@@ -390,6 +397,8 @@ fn predict_tweet_class(path: &str, input_tweet: &str, k: usize, method: usize) -
 }
 ```
 <small>Extrait de [rust/src/clustering.rs](rust/src/clustering.rs)</small>
+
+#### Classification par vote majoritaire
 
 Puis, on se sert des données classifiées récupérées via le paramètre `path` pour annoter automatiquement les clusters.  
 Pour un peu plus de précision, on fait un vote par majorité. C'est à dire que pour chaque tweet déjà classifié, on regarde dans quel cluster il a été placé, et on ajouter un vote en faveur de la classe de ce tweet pour son cluster.
@@ -440,5 +449,5 @@ Nous proposons aussi une méthode d'évaluation de cluster `clustering_evaluate`
 
 ### Bayes
 
-
+Enfin, la dernière partie de notre travail concernait la classification bayésienne.
 
