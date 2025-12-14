@@ -30,20 +30,34 @@ enum TypeVote {
     Pondere,
 }
 
+impl TypeVote {
+    fn vote(&self, proches_voisins: &[(f64, i32)]) -> Option<i32> {
+        match self {
+            TypeVote::Majoritaire => vote_majoritaire(proches_voisins),
+            TypeVote::Pondere => vote_pondere(proches_voisins),
+        }
+    }
+}
+
+impl From<i64> for TypeVote {
+    fn from(value: i64) -> Self {
+        match value {
+            1 => TypeVote::Pondere,
+            _ => TypeVote::Majoritaire,
+        }
+    }
+}
+
 #[godot_api]
 impl Knn {
     #[func]
     fn knn_execute(&mut self, path: GString, tweet_a_classifier: GString, k: i64, type_vote: i64) -> GString {
         let path_str = path.to_string();
         let tweet_str = tweet_a_classifier.to_string();
-        let type_vote_usize = type_vote as usize;
         let k_usize = k as usize;
         
         // Déterminer le type de vote
-        let vote_type = match type_vote_usize {
-            1 => TypeVote::Pondere,
-            _ => TypeVote::Majoritaire, // Par défaut
-        };
+        let vote_type = TypeVote::from(type_vote);
         
         // Charger les données depuis le CSV
         let base = match charger_donnees(&path_str) {
@@ -75,13 +89,9 @@ impl Knn {
     fn knn_evaluate(&mut self, path: GString, k: i64, type_vote: i64) -> GString {
         let path_str = path.to_string();
         let k_usize = k as usize;
-        let type_vote_usize = type_vote as usize;
         
         // Déterminer le type de vote
-        let vote_type = match type_vote_usize {
-            1 => TypeVote::Pondere,
-            _ => TypeVote::Majoritaire,
-        };
+        let vote_type = TypeVote::from(type_vote);
 
         // Charger les données depuis le CSV
         let base_complete = match charger_donnees(&path_str) {
@@ -153,11 +163,7 @@ fn classifier_tweet(x: &str, k: usize, base: &[TweetEtiquete], type_vote: TypeVo
         }
     }
     
-    // Étape 4: Appliquer le type de vote choisi
-    match type_vote {
-        TypeVote::Majoritaire => vote_majoritaire(&proches_voisins),
-        TypeVote::Pondere => vote_pondere(&proches_voisins),
-    }
+    type_vote.vote(&proches_voisins)
 }
 
 /// Vote majoritaire simple (comptage des occurrences)
