@@ -1,3 +1,5 @@
+use godot::global::godot_print;
+
 use crate::csv_ext::cols_sniffer::{AutoColumns, AutoColumnsError, ColsSniffer};
 
 impl ColsSniffer {

@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use csv::{Reader, Writer};
 
 use godot::builtin::GString;
+use godot::global::godot_print;
 use godot::obj::WithUserSignals;
 use itertools::Itertools;
 
@@ -24,7 +25,7 @@ impl CleanData {
         rating_col: Option<usize>,
         filters: &Vec<RuleFilter>
     ) -> Result<String, CleanDataError>
-    {
+    {   
         let mut filter_counters: HashMap<&RuleFilter, u32> =
             filters
                 .iter()
@@ -43,56 +44,56 @@ impl CleanData {
             .get(data_col)
             .ok_or(CleanDataError::MissingMessage(record.clone()))?;
         
-        let (tweet, _) = encoding::detect_and_decode(tweet);
-        
-        
-        let rating = match rating_col {
-            Some(col) => {
-                let rating = record
-                .get(col)
-                .ok_or(CleanDataError::MissingRating(record.clone()))?;
+            let (tweet, _) = encoding::detect_and_decode(tweet);
             
-            encoding::detect_and_decode(rating).0
-        },
-        None => String::from(String::from(BLANK_RATING)),
-    };
-    
-    
-    let mut processed_entry = String::from(tweet);
-    let mut filters_iter = filters.iter();
-    
-    loop {
-        // Still some filters left to apply
-        if let Some(filter) = filters_iter.next() {
-            let mut logs = None;
-            let filtered_result = filter.apply_with_logs(&mut processed_entry, &mut logs);
             
-            if let Some(log_msg) = logs {
-                self.signals()
-                    .log_sent()
-                    .emit(&GString::from(log_msg));
-                        
-                if let Some(counter) = filter_counters.get_mut(filter) {
-                    *counter += 1; 
-                }
-            }
+            let rating = match rating_col {
+                Some(col) => {
+                    let rating = record
+                        .get(col)
+                        .ok_or(CleanDataError::MissingRating(record.clone()))?;
                     
-            match filtered_result {
-                // Entering here means the filters trimmed the data 
-                //  up to the point that it is empty.
-                // We should thus move to the next record, and drop this one.
-                // - dropping means not recording it in the output csv.
-                None => break,
-                Some(passed) => {
-                    if let Cow::Owned(new_value) = passed {
-                        processed_entry = new_value;
+                    encoding::detect_and_decode(rating).0
+                },
+                None => String::from(String::from(BLANK_RATING)),
+            };
+            
+            
+            let mut processed_entry = String::from(tweet);
+            let mut filters_iter = filters.iter();
+            
+            loop {
+                // Still some filters left to apply
+                if let Some(filter) = filters_iter.next() {
+                    let mut logs = None;
+                    let filtered_result = filter.apply_with_logs(&mut processed_entry, &mut logs);
+                    
+                    if let Some(log_msg) = logs {
+                        self.signals()
+                            .log_sent()
+                            .emit(&GString::from(log_msg));
+                                
+                        if let Some(counter) = filter_counters.get_mut(filter) {
+                            *counter += 1; 
+                        }
                     }
+                            
+                    match filtered_result {
+                        // Entering here means the filters trimmed the data 
+                        //  up to the point that it is empty.
+                        // We should thus move to the next record, and drop this one.
+                        // - dropping means not recording it in the output csv.
+                        None => break,
+                        Some(passed) => {
+                            if let Cow::Owned(new_value) = passed {
+                                processed_entry = new_value;
+                            }
+                        }
+                    }
+                } else {   // No filter left to apply, and some data is remaining
+                    saved_records.push([rating, processed_entry]);
+                    break;
                 }
-            }
-        } else {   // No filter left to apply, and some data is remaining
-            saved_records.push([rating, processed_entry]);
-            break;
-        }
             }
         }
         

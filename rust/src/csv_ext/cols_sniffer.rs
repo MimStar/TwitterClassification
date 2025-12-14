@@ -4,6 +4,7 @@ use std::usize;
 
 use csv::ReaderBuilder;
 use csv_sniffer::Sniffer;
+use godot::global::godot_print;
 
 use crate::csv_ext::cols_sniffer::error::AutoColumnsError;
 use crate::csv_ext::transform::records_to_vec2d;
@@ -37,19 +38,26 @@ impl ColsSniffer {
     pub fn sniff_columns(path: &str) -> Result<AutoColumns, AutoColumnsError> {
         let mut sniffer = Sniffer::new();
         let mut file = File::open(path)?;
-        let meta = sniffer.sniff_reader(&mut file)?;
-    
-        let has_header = meta.dialect.header.has_header_row;
-        let delimiter = meta.dialect.delimiter;
-        let flexible = meta.dialect.flexible;
-    
+        let meta = sniffer.sniff_reader(&mut file);
+
+        let mut rdr = ReaderBuilder::new();
+
+        let mut has_header = false;
+
+        if let Ok(meta) = meta {
+            has_header = meta.dialect.header.has_header_row;
+            let delimiter = meta.dialect.delimiter;
+            let flexible = meta.dialect.flexible;
+
+            rdr.has_headers(has_header)
+                .delimiter(delimiter)
+                .flexible(flexible);
+        }
+
+        
         file.seek(SeekFrom::Start(0))?;
-    
-        let mut rdr = ReaderBuilder::new()
-            .has_headers(has_header)
-            .delimiter(delimiter)
-            .flexible(flexible)
-            .from_reader(file);
+
+        let mut rdr = rdr.from_reader(file);
     
         let headers = rdr.headers()?.clone();
     
