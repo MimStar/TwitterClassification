@@ -345,6 +345,99 @@ Un vote pondéré en revanche prendra en compte cette distance. Il est *pondér�
 
 ### Clustering
 
+Le clustering n'est pas une méthode de classification à proprement parler, mais elle peut être utilisée comme une étape de classification automatique. En effet, le clustering ne permet pas d'associer de sens, de classes, mais uniquement de former des groupes de ressemblance.
+
+Ainsi, l'idée est de regrouper la donnée par similarité - le clustering - puis d'assigner un sens à chaque groupe constitués. Cette seconde étape peut donc soit être réalisée manuellement par un humain qui pourra intuitivement repérer les subtilités du language humain, soit en utilisant un second traitement automatique, soit dédiée à cette pipeline, soit basée sur un autre algorithme de classification. (Par exemple, on pourrait d'abord construire les clusters, puis moyenner avec la classification naive pour déterminer les classes de chaque cluster)
+
+Ce clustering s'opère en plusieurs étapes. L'idée vulgarisée est d'abord de considérer tous les points, i.e. nos données, comme des clusters indépendants. On calcul ensuite la distance entre chaque cluster, et on regroupe chaque cluster avec son voisin le plus proche. On répète l'opération jusqu'à ce qu'il ne reste plus qu'un cluster, et on obtient ainsi un arbre de regroupement dans lequel on peut "couper" l'arbre à une hauteur donnée pour obtenir le nombre de clusters souhaités. (Il est aussi possible de faire l'inverse, partir d'un unique cluster jusqu'à n'avoir plus que des clusters composés d'un seul point.)
+
+On a donc deux modules à déterminer - comme précédemment, calculer la distance entre des données, mais aussi comment calculer la distance entre des clusters.  
+En l'occurence, notre programme est compatible avec la méthode Averrage, Complete & Ward.
+- Averrage est plutôt explicite, elle consiste à prendre la moyenne des distances entre toutes les paires de points des deux clusters.
+- Complete consiste à prendre la distance maximale des distances de paires.
+- Ward est plus particulière, elle consiste à prendre comme distance "l'augmentation de variance" qu'impliquerai le fait de fusionner ces deux clusters. Un caveat de cette méthode est que la distance entre deux points est contrainte à une distance euclidienne.
+
+Dans ce cadre, nous devions développer un programme permettant de classifier un tweet donné en entrée. Notre implémentation se base sur la crate [kodama](https://docs.rs/kodama/latest/kodama).
+
+Ci-dessous, on utilise kodama pour réaliser le clustering et la "coupe".
+```rs
+fn predict_tweet_class(path: &str, input_tweet: &str, k: usize, method: usize) -> Result<i32, Box<dyn Error>> {
+    // ...
+
+    // Matrices de distance des points
+    let mut condensed = Vec::new();
+    for i in 0..n - 1 {
+        for j in i + 1..n {
+            condensed.push(distance(&tweets[i], &tweets[j]));
+        }
+    }
+
+    let linkage_method = match method { 0 => Method::Average, 1 => Method::Complete, 2 => Method::Ward, _ => Method::Average };
+    // Clustering
+    let dendrogram = linkage(&mut condensed, n, linkage_method);
+
+    // Reconstruction des clusters - Récupérer k clusters
+    let steps = dendrogram.steps();
+    let max_index = if steps.is_empty() { n } else { n + steps.len() };
+    let mut uf = UnionFind::new(max_index);
+
+    let steps_to_run = if n > k { n - k } else { 0 };
+    for step in steps.iter().take(steps_to_run) {
+        uf.union(step.cluster1, step.cluster2);
+    }
+
+    // ...
+}
+```
+<small>Extrait de [rust/src/clustering.rs](rust/src/clustering.rs)</small>
+
+Puis, on se sert des données classifiées récupérées via le paramètre `path` pour annoter automatiquement les clusters.  
+Pour un peu plus de précision, on fait un vote par majorité. C'est à dire que pour chaque tweet déjà classifié, on regarde dans quel cluster il a été placé, et on ajouter un vote en faveur de la classe de ce tweet pour son cluster.
+
+A l'issue de ce processus, on aura donc, pour chaque cluster, un nombre de votes neutres, positifs, et négatifs. Le cluster sera annoté par vote majoritaire.
+
+Ensuite, on cherche le tweet le plus proche de tweet d'entrée, et on retourne donc la classe correspondant au cluster de ce tweet.
+```rs
+fn predict_tweet_class(path: &str, input_tweet: &str, k: usize, method: usize) -> Result<i32, Box<dyn Error>> {
+  // ...
+
+  // Calcul des labels des clusters via vote
+  let mut cluster_votes: HashMap<usize, HashMap<i32, usize>> = HashMap::new();
+  for tweet in &tweets {
+      let root = uf.find(tweet.id);
+      *cluster_votes.entry(root).or_default().entry(tweet.label).or_default() += 1;
+  }
+
+  let mut cluster_labels: HashMap<usize, i32> = HashMap::new();
+  for (root, votes) in cluster_votes {
+      let lbl = votes.into_iter().max_by_key(|&(_, c)| c).map(|(l, _)| l).unwrap_or(2);
+      cluster_labels.insert(root, lbl);
+  }
+
+  // Voisin le plus proche en cherchant quel tweet connu ressemble le plus au tweet entré par l'utilisateur.
+  let input_words = tokeniser_tweet(input_tweet);
+  let input_obj = Tweet { id: 0, contenu: input_tweet.to_string(), mots: input_words, label: -1 };
+  
+  let mut best_dist = f64::MAX;
+  let mut best_neighbor_idx = 0;
+
+  for tweet in &tweets {
+      let d = distance(&input_obj, tweet);
+      if d < best_dist {
+          best_dist = d;
+          best_neighbor_idx = tweet.id;
+      }
+  }
+
+  // On retourne le label du cluster auquel appartient ce voisin
+  let neighbor_cluster = uf.find(best_neighbor_idx);
+  Ok(*cluster_labels.get(&neighbor_cluster).unwrap_or(&2))
+}
+```
+<small>Extrait de [rust/src/clustering.rs](rust/src/clustering.rs)</small>
+
+Nous proposons aussi une méthode d'évaluation de cluster `clustering_evaluate` (voir [rust/src/clustering.rs](rust/src/clustering.rs)), dont nous discuterons des résultats dans la dernière partie de ce rapport.
+
 ### Bayes
 
 
