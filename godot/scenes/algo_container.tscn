@@ -101,14 +101,12 @@ layout_mode = 2
 layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("1_we0wx")
-disabled = true
 text = "Import Positives"
 
 [node name="NegativeButton" type="Button" parent="NaiveOptionsBar"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("1_we0wx")
-disabled = true
 text = "Import Negatives"
 
 [node name="Poids" type="HBoxContainer" parent="NaiveOptionsBar"]

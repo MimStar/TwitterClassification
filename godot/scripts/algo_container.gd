@@ -11,6 +11,10 @@ var database_path = ""
 var positive_path = ""
 var negative_path = ""
 
+func _ready():
+	_on_algo_button_item_selected(0)
+	pass
+
 func create_evaluation_window():
 	var new_window = Window.new()
 	var new_text_label = RichTextLabel.new()
@@ -65,6 +69,7 @@ func _on_algo_button_item_selected(index: int) -> void:
 			$ClusterOptionsBar.hide()
 			k = $NaiveOptionsBar/Poids/SpinBox.value
 		1:
+			$LaunchButtonsContainer/EvaluateButton.disabled = false
 			if tweet.is_empty():
 				$LaunchButtonsContainer/ClassifyButton.disabled = true
 			else:
@@ -76,6 +81,7 @@ func _on_algo_button_item_selected(index: int) -> void:
 			k = $KNNOptionsBar/KVoisinsMargin/KVoisins/SpinBox.value
 			mode = $KNNOptionsBar/ModesButton.selected
 		2:
+			$LaunchButtonsContainer/EvaluateButton.disabled = false
 			if tweet.is_empty():
 				$LaunchButtonsContainer/ClassifyButton.disabled = true
 			else:
@@ -87,6 +93,11 @@ func _on_algo_button_item_selected(index: int) -> void:
 			k = $ClusterOptionsBar/KVoisinsMargin/KClusters/SpinBox.value
 			mode = $ClusterOptionsBar/ModesButton.selected
 		3:
+			$LaunchButtonsContainer/EvaluateButton.disabled = false
+			if tweet.is_empty():
+				$LaunchButtonsContainer/ClassifyButton.disabled = true
+			else:
+				$LaunchButtonsContainer/ClassifyButton.disabled = false
 			$NaiveOptionsBar.hide()
 			$KNNOptionsBar.hide()
 			$ClusterOptionsBar.hide()
