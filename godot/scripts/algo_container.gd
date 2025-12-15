@@ -44,7 +44,7 @@ func _on_close_requested(node):
 func _on_tweet_edit_text_changed() -> void:
 	tweet = $TweetEdit.text
 	$ResultLabel.text = ""
-	if tweet.is_empty():
+	if tweet.is_empty() or ($NaiveOptionsBar.visible == true and (positive_path.is_empty() or negative_path.is_empty())):
 		$LaunchButtonsContainer/ClassifyButton.disabled = true
 	else:
 		$LaunchButtonsContainer/ClassifyButton.disabled = false
