@@ -79,11 +79,13 @@ offset_bottom = 15.5
 grow_horizontal = 2
 grow_vertical = 2
 selected = 0
-item_count = 2
+item_count = 3
 popup/item_0/text = "Average"
 popup/item_0/id = 0
 popup/item_1/text = "Complete"
 popup/item_1/id = 1
+popup/item_2/text = "Ward"
+popup/item_2/id = 2
 
 [node name="LaunchButton" type="Button" parent="."]
 layout_mode = 1
