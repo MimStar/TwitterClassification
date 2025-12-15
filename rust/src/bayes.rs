@@ -5,6 +5,14 @@ use std::io::{BufReader, BufRead};
 use rand::seq::SliceRandom;
 use rand::rng;
 
+use crate::bayes::ngram::NgramMode;
+use crate::bayes::representation::Representation;
+use crate::bayes::smoothing::VoteType;
+
+mod ngram;
+mod smoothing;
+mod representation;
+
 #[derive(GodotClass)]
 #[class(base=Node)]
 struct Bayes{
@@ -24,24 +32,6 @@ struct TweetEtiquete {
     etiquette: i32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-enum Representation {
-    Presence,
-    Frequence,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-enum NgramMode {
-    Uni,
-    Bi,
-    UniBi,
-}
-
-#[derive(Debug, Clone, Copy)]
-enum VoteType {
-    Laplace,
-    AddAlpha,
-}
 
 #[derive(Debug)]
 struct BayesModel {
@@ -62,21 +52,11 @@ impl Bayes{
         let path_str = path.to_string();
         let tweet_str = tweet.to_string();
         
-        let vote_type = match type_vote as usize {
-            1 => VoteType::AddAlpha,
-            _ => VoteType::Laplace,
-        };
+        let vote_type = VoteType::from(type_vote);
 
-        let representation = match type_representation as usize {
-            1 => Representation::Frequence,
-            _ => Representation::Presence,
-        };
+        let representation = Representation::from(type_representation);
 
-        let ngram_mode = match ngram_type {
-            1 => NgramMode::Bi,
-            2 => NgramMode::UniBi,
-            _ => NgramMode::Uni,
-        };
+        let ngram_mode = NgramMode::from(ngram_type);
 
         let data = match charger_donnees(&path_str){
             Ok(v) => v,
@@ -109,21 +89,11 @@ impl Bayes{
     fn bayes_evaluate(&mut self, path: GString, type_vote: i64, type_representation: i64, ngram_type: i64) -> GString {
         let path_str = path.to_string();
         
-        let vote_type = match type_vote as usize {
-            1 => VoteType::AddAlpha,
-            _ => VoteType::Laplace,
-        };
+        let vote_type = VoteType::from(type_vote);
 
-        let representation = match type_representation as usize {
-            1 => Representation::Frequence,
-            _ => Representation::Presence,
-        };
+        let representation = Representation::from(type_representation);
 
-        let ngram_mode = match ngram_type {
-            1 => NgramMode::Bi,
-            2 => NgramMode::UniBi,
-            _ => NgramMode::Uni,
-        };
+        let ngram_mode = NgramMode::from(ngram_type);
 
         let all = match charger_donnees(&path_str) {
             Ok(v) => v,
@@ -172,16 +142,10 @@ impl BayesModel {
         let mut vocab: HashSet<String> = HashSet::new();
 
         for t in data {
-            let tokens = tokeniser_tweet(&t.contenu, ngram_mode);
+            let tokens = ngram_mode.tokeniser_tweet(&t.contenu);
             
             // Selon le mode, on garde soit tous les mots (Fréquence), soit les uniques (Présence)
-            let tokens_to_count: Vec<String> = match representation {
-                Representation::Presence => {
-                    let unique: HashSet<_> = tokens.into_iter().collect();
-                    unique.into_iter().collect()
-                },
-                Representation::Frequence => tokens
-            };
+            let tokens_to_count: Vec<String> = representation.tokens_to_count(tokens);
             
             // Remplissage de la matrice de comptage
             let map = word_counts.entry(t.etiquette).or_insert_with(HashMap::new);
@@ -192,10 +156,7 @@ impl BayesModel {
         }
 
         // Définition du paramètre de lissage
-        let alpha = match vote {
-            VoteType::Laplace => 1.0,
-            VoteType::AddAlpha => 0.5,
-        };
+        let alpha = f64::from(vote);
         
         // Calcul des Priors
         let total_documents = class_counts.values().sum::<usize>() as f64;
@@ -239,15 +200,9 @@ impl BayesModel {
 
     // Retourne la classe ayant le score (log-probabilité) le plus élevé
     fn classifier(&self, tweet: &str) -> Option<i32> {
-        let tokens = tokeniser_tweet(tweet, self.ngram_mode);
+        let tokens = self.ngram_mode.tokeniser_tweet(tweet);
         
-        let tokens_to_score: Vec<String> = match self.representation {
-            Representation::Presence => {
-                let unique: HashSet<_> = tokens.into_iter().collect();
-                unique.into_iter().collect()
-            },
-            Representation::Frequence => tokens
-        };
+        let tokens_to_score: Vec<String> = self.representation.tokens_to_count(tokens);
 
         let mut scores: HashMap<i32, f64> = HashMap::new();
 
@@ -305,34 +260,6 @@ fn charger_donnees(chemin: &str) -> Result<Vec<TweetEtiquete>, Box<dyn std::erro
         }
     }
     Ok(donnees)
-}
-
-fn tokeniser_tweet(tweet: &str, mode: NgramMode) -> Vec<String> {
-    let unigrams: Vec<String> = tweet.split_whitespace()
-        .map(|w| w.to_lowercase())
-        .filter(|w| w.chars().count() >= 4)
-        .collect();
-
-    let mut tokens = Vec::new();
-
-    match mode {
-        NgramMode::Uni => {
-            tokens = unigrams;
-        },
-        NgramMode::Bi => {
-            for window in unigrams.windows(2) {
-                tokens.push(format!("{} {}", window[0], window[1]));
-            }
-        },
-        NgramMode::UniBi => {
-            tokens.extend(unigrams.clone());
-            for window in unigrams.windows(2) {
-                tokens.push(format!("{} {}", window[0], window[1]));
-            }
-        }
-    }
-    
-    tokens
 }
 
 fn diviser_donnees_stratifiee(donnees: &[TweetEtiquete], ratio_train: f64) -> (Vec<TweetEtiquete>, Vec<TweetEtiquete>){
