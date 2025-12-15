@@ -26,8 +26,21 @@
       - [Pipeline](#pipeline-1)
       - [Grammage](#grammage)
       - [Representation](#representation)
-      - [Smoothing](#smoothing)
+      - [Lissage](#lissage)
       - [Classification](#classification-1)
+  - [Application](#application)
+    - [Sélection \& Nettoyage](#sélection--nettoyage)
+    - [Annotation automatique](#annotation-automatique)
+      - [Naive](#naive-1)
+      - [KNN](#knn-1)
+      - [Clustering](#clustering-1)
+      - [Bayes](#bayes-1)
+    - [Classification \& evaluation](#classification--evaluation)
+- [Evaluation](#evaluation)
+  - [KNN](#knn-2)
+  - [Clustering](#clustering-2)
+  - [Bayes](#bayes-2)
+- [Conclusions](#conclusions)
 
 
 
@@ -545,7 +558,7 @@ impl Representation {
 ```
 <small>Extrait de [rust/src/bayes/representation.rs](rust/src/bayes/representation.rs)</small>
 
-#### Smoothing
+#### Lissage
 
 Enfin, on propose 2 lissage alpha classique - Laplace et Lidstone, ainsi qu'un lissage Add-alpha générique.
 ```rs
@@ -596,3 +609,118 @@ Le second correspond à la probabilité $P(\text{attribut} \mid \text{classe})$,
 Tout deux sont annotés "log" parce qu'on utilise ici le logarithme des probabilités. Ainsi, au lieu de multiplier les probabilités, on additionne les logarithmes des probabilités. Celà permet d'éviter les underflows, est plus efficace, tout en étant mathématiquement équivalent lorsqu'il s'agit de comparer des classes.
 
 Vous trouverez plus de détails sur l'implémentation dans la méthode `new` et `classifier` de `BayesModel` dans [rust/src/bayes.rs](rust/src/bayes.rs).
+
+
+## Application
+
+Notre application se présente sous la forme suivante.  
+
+Dans le menu principal, vous avez le choix entre diverses options.
+- Le nettoyage de données
+- L'annotation manuelle
+- L'annotation automatique
+
+![menu](rapport/menu.png)
+
+### Sélection & Nettoyage
+
+Le nettoyage ouvrira un menu contextuel pour sélectionner le fichier source.
+
+![selection](rapport/selection.png)
+
+Le fichier sélectionné sera nettoyé, puis ouvert dans le menu d'annotation manuelle qui permet d'éditer le fichier.
+
+![edition](rapport/edition.png)
+
+### Annotation automatique
+
+Depuis le menu d'annotation manuelle, vous pourrez ensuite passer dans le menu automatique.
+
+Celui-ci vous permet de sélectionner une méthode d'annotation au choix, parmis la méthode naïve, KNN, de Clustering et de Bayes.
+
+![auto](rapport/automatique.png)
+
+Pour chaque mode, vous pourrez évaluer le modèle et classifier un tweet entrée dans le champ principal, situé en haut de l'inteface.
+
+L'interface utilisateur se mettra aussi à jour pour disposer les éléments de configurations nécessaires pour chaque mode. Petite visite guidée !
+
+#### Naive
+
+La classification naïve se base sur une liste de mots "positifs" et "négatifs", ainsi que sur un poids dont le sens est discuté précedemment dans la partie [Naive](#naive).
+
+![naive](rapport/naive.png)
+
+#### KNN
+
+La classification KNN peut-être configurée par le nombre K de voisins pris en compte, et la méthode de "vote" discuté dans la partie [Vote](#vote).
+![knn](rapport/knn.png)
+
+
+#### Clustering
+
+La classification par clustering peut-être elle configurée avec le nombre de cluster finaux, et la distance utilisée entre les clusters discuté dans la partie [Clustering - Pipeline](#pipeline).
+
+![clustering](rapport/clustering.png)
+
+#### Bayes
+
+Enfin, la classication Bayes propose trois paramètres.
+- La méthode de [lissage](#lissage)
+- Le mode de [représentation](#representation) des attributs
+- Le [grammage](#grammage) des messages
+
+![bayes](rapport/bayes.png)
+
+### Classification & evaluation
+
+Lorsque vous cliquerez sur classifier, la classe attribuée au message entrée s'affichera en bas de l'interface.
+
+![classifier](rapport/classifier.png)
+
+L'evaluation quant à elle ouvrira la matrice du modèle.
+
+![evaluation](rapport/evaluation.png)
+
+# Evaluation
+
+Nous avons évalué nos implémentations de KNN, clustering et Bayes sur deux jeux de données. L'un fournis pour la réalisation de ce tp, `testdata.csv` et l'un constitué par nos soins pour s'offrir un second référentiel, `custom_tweets.csv`.
+
+## KNN
+
+![evaluation knn](rapport/evaluation/knn.png)
+
+On constate que le vote pondéré apporte systématiquement une très sensible amélioration de précision.
+
+On peut aussi remarquer que pour un k plus grand, le modèle est moins sensible au bruit (la confusion est plus faible). Sur ces jeux de données, un k plus grand donne globalement de meilleurs résultats.
+
+On remarque aussi que la classe la plus problématique est la classe positive, elle est souvent confondue avec la classe neutre.
+
+Enfin, la dernière observation, et la plus évidente, que l'on peut faire vient de l'impact du choix de donnée. Le second jeu, plus petit, est plus équilibré. Mais sa petite taille influence aussi probablement la variété de ses entrées. Le résultat est une précision nettement suppérieure avec celui-ci.
+
+## Clustering
+
+![evaluation clustering](rapport/evaluation/clustering.png)
+
+On observe ici une tendance nette - la classe neutre est très fréquemment confondue.  
+
+Les résultat au global sont très disparates. Pour le large jeu de donnée, le clustering est moins efficace que le KNN, et le choix entre une distance complète et moyenne a peu d'influence. On observe une légère amélioration avec 2 clusters puisqu'ils permettent de mieux identifier les extrêmes, mais la classe neutre reste problématique.
+
+Sur le petit jeu de donnée, le clustering avec distance moyenne et 3 clusters est nettement supérieurs aux autre. Il offre d'ailleurs des performances similaires aux diférents KNNs.
+
+## Bayes
+
+![evaluation bayes](rapport/evaluation/bayes.png)
+
+Il est intéressant d'observer que Bayes semble être le meilleur choix sur le large jeu de donnée, mais pas particulièrement sur le petit jeu de donnée contrôlé.
+
+Surprenamment aussi, la présence semble meilleure que la fréquence sur le large jeu de donnée, mais ne semble pas significativement influencer le petit.
+
+Sur nos deux jeux de données, le lissage Laplace (add-1) s'est révélé systématiquement meilleur que le lissage Lidstone (add-0.5).
+
+# Conclusions
+
+Nous retenons plusieurs chose de notre travail. D'une part, nous avons pu être témoin de l'importance capitale qu'a la qualité des données dans de tel traitements. C'est à dire les données elle-même, mais aussi les traitements qu'on leur applique avant de les utiliser. Sur des jeux de données plus contrôlés, nos résultats se sont révélés nettement meilleurs.
+
+D'autre part, nous gardons en tête que nos implémentation restent relativement naïve. Par exemple, concernant bayes, les attributs sont considérés indépendants entre eux, mais nous savons qu'un mot prend son réel sens dans un contexte, en particuliers lorsqu'il s'agit d'exprimer certains trait d'esprits très humains comme l'ironie. Il s'agit donc du contexte du mot dans une phrase, mais il peut s'agir aussi du contexte de cette même phrase dans un environnement. Notre étude est bien limité en cet aspect que nous n'avons accès qu'à des tweets bruts, tels quels. Une analyse plus rigoureuse s'intéresserait au contexte dans lequel il a été publié, une ou des réponses, d'éventuelles citations, etc. Le travail peut rapidement devenir tentaculaire !
+
+Aussi, puisque nous avons travaillé avec rust et non python, nous avons été confrontés a beaucoup de subtilités concernant le traitement initial de la donnée. Rust n'est pas aussi fournit d'outils en ce qui concerne la science des données, python est bien plus communément utilisé dans ce cadre, et faire sans ce confort a révélé le casse-tête qu'il est de gérer des formats de données divers parfois non spécifiés ni normalisés, et d'en trouver cohérence.
